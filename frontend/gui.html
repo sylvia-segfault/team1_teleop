@@ -38,7 +38,9 @@
     messageType : 'std_msgs/Float64'
   });
 
-  move = function (data) {
+  move = function (direction) {
+    var data = Number(document.getElementById)
+    if (direction) data *= -1;
     var move_arm = new ROSLIB.Message({data : data});
     console.log("In move: " + data);
     cmd_vel_listener.publish(move_arm);
@@ -55,7 +57,11 @@
   <h1>Simple ROS User Interface</h1>
   <p>Connection status: <span id="status"></span></p>
   <p>Last /txt_msg received: <span id="msg"></span></p>
-  <button onclick="move(0.2)">MOVE OUT</button>
-  <button onclick="move(-0.2)">MOVE IN</button>
+  <button onclick="move(0)">MOVE OUT</button>
+  <button onclick="move(1)">MOVE IN</button>
+  <form id="form">
+    <label for="arm_input">Amount to move arm:</label>
+    <input type="number" id="arm_input" name="arm_input" step="0.05" min="0" max="0.5"><br><br>
+  </form>
 </body>
 </html>
