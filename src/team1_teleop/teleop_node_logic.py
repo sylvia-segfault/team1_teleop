@@ -15,9 +15,11 @@ class TeleopNode:
         self.robot.arm.move_to(0.0)
         self.robot.push_command()
         self.robot.arm.wait_until_at_setpoint()
+        self.pub = rospy.Publisher('lift_pos', Float64, queue_size=10)
         self.pub = rospy.Publisher('arm_pos', Float64, queue_size=10)
+        self.pub = rospy.Publisher('grip_pos', Float64, queue_size=10)
         self.sub = rospy.Subscriber('arm_move_commands', Float64, self.move_arm_callback)
-        self.sub = rospy.Subscriber('body_move_commands', Float64, self.body_arm_callback)
+        self.sub = rospy.Subscriber('lift_move_commands', Float64, self.move_lift_callback)
         self.timer = rospy.Timer(rospy.Duration(0.5), self.timer_callback)
         
 
@@ -40,20 +42,27 @@ class TeleopNode:
           self.robot.push_command()
           self.robot.arm.wait_until_at_setpoint()
 
-    def move_body_callback(self, data):
-        rospy.loginfo(rospy.get_caller_id() + "body move command received %f", data.data)
+    def move_lift_callback(self, data):
+        rospy.loginfo(rospy.get_caller_id() + "lift move command received %f", data.data)
         # self.robot.base.translate_by(x_m=data.data)
-        body_pos = self.robot.body.status['pos'] + data.data
+        lift_pos = self.robot.lift.status['pos'] + data.data
         # if self.arm_pos < 0:
         #     self.arm_pos = 0
-        self.robot.body.move_to(body_pos)
+        self.robot.lift.move_to(lift_pos)
         self.robot.push_command()
         self.robot.body.wait_until_at_setpoint()
     
     def timer_callback(self, timer):
-        pos = self.robot.arm.status['pos']
-        rospy.loginfo("Publishing arm position {}".format(pos))
-        self.pub.publish(pos)
+        lift_pos = self.robot.lift.status['pos']
+        arm_pos = self.robot.arm.status['pos']
+        grip_pos = self.robot.end_of_arm.status['pos']
+
+        rospy.loginfo("Publishing lift position {}".format(lift_pos))
+        rospy.loginfo("Publishing arm position {}".format(arm_pos))
+        rospy.loginfo("Publishing gripper position {}".format(grip_pos))
+        self.pub.publish(lift_pos)
+        self.pub.publish(arm_pos)
+        self.pub.publish(grip_pos)
     
     def shutdown_hook(self):
         rospy.loginfo("Shutting down TeleopNode")
