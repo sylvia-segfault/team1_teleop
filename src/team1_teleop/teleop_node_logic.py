@@ -50,12 +50,12 @@ class TeleopNode:
         #     self.arm_pos = 0
         self.robot.lift.move_to(lift_pos)
         self.robot.push_command()
-        self.robot.body.wait_until_at_setpoint()
+        self.robot.lift.wait_until_at_setpoint()
     
     def timer_callback(self, timer):
         lift_pos = self.robot.lift.status['pos']
         arm_pos = self.robot.arm.status['pos']
-        grip_pos = self.robot.end_of_arm.status['pos']
+        grip_pos = 1
 
         rospy.loginfo("Publishing lift position {}".format(lift_pos))
         rospy.loginfo("Publishing arm position {}".format(arm_pos))
