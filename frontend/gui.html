@@ -39,7 +39,7 @@
   });
 
   move = function (direction) {
-    var data = Number(document.getElementById)
+    var data = Number(document.getElementById("arm_input").value);
     if (direction) data *= -1;
     var move_arm = new ROSLIB.Message({data : data});
     console.log("In move: " + data);
