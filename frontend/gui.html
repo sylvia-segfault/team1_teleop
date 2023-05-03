@@ -29,7 +29,7 @@
   });
 
   lift_listener.subscribe(function(m) {
-    document.getElementById("lift_msg").innerHTML = m.data;
+    document.getElementById("lift_msg").innerHTML = m.data.toFixed(4);
   });
 
   var arm_listener = new ROSLIB.Topic({
@@ -39,7 +39,7 @@
   });
 
   arm_listener.subscribe(function(m) {
-    document.getElementById("arm_msg").innerHTML = m.data;
+    document.getElementById("arm_msg").innerHTML = m.data.toFixed(4);
   });
 
   var grip_listener = new ROSLIB.Topic({
@@ -48,23 +48,37 @@
     messageType : 'std_msgs/Float64'
   });
 
-  arm_listener.subscribe(function(m) {
-    document.getElementById("grip_msg").innerHTML = m.data;
+  grip_listener.subscribe(function(m) {
+    document.getElementById("grip_msg").innerHTML = m.data.toFixed(4);
   });
 
 
-  cmd_vel_listener = new ROSLIB.Topic({
+  arm_cmd_vel_listener = new ROSLIB.Topic({
     ros : ros,
     name : "/arm_move_commands",
     messageType : 'std_msgs/Float64'
   });
 
-  move = function (direction) {
+  move_arm = function (direction) {
     var data = Number(document.getElementById("arm_input").value);
     if (direction) data *= -1;
     var move_arm = new ROSLIB.Message({data : data});
     console.log("In move: " + data);
-    cmd_vel_listener.publish(move_arm);
+    arm_cmd_vel_listener.publish(move_arm);
+  }
+
+  lift_cmd_vel_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : "/lift_move_commands",
+    messageType : 'std_msgs/Float64'
+  });
+
+  move_lift = function (direction) {
+    var data = Number(document.getElementById("arm_input").value);
+    if (direction) data *= -1;
+    var move_lift = new ROSLIB.Message({data : data});
+    console.log("In move: " + data);
+    lift_cmd_vel_listener.publish(move_lift);
   }
 
   // txt_listener.subscribe(function(m) {
@@ -80,8 +94,11 @@
   <p>Lift position: <span id="lift_msg"></span></p>
   <p>Arm position: <span id="arm_msg"></span></p>
   <p>Gripper position: <span id="grip_msg"></span></p>
-  <button onclick="move(0)">MOVE OUT</button>
-  <button onclick="move(1)">MOVE IN</button>
+  <button onclick="move_lift(0)">MOVE UP</button>
+  <button onclick="move_lift(1)">MOVE DOWN</button>
+  <br>
+  <button onclick="move_arm(0)">MOVE OUT</button>
+  <button onclick="move_arm(1)">MOVE IN</button>
   <form id="form">
     <label for="arm_input">Amount to move arm:</label>
     <input type="number" id="arm_input" name="arm_input" step="0.05" min="0" max="0.5"><br><br>

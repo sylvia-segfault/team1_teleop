@@ -11,46 +11,50 @@ class TeleopNode:
     def __init__(self):
         self.robot = stretch_body.robot.Robot()
         self.robot.startup()
-        #self.arm_pos = 0.0
-        self.robot.arm.move_to(0.0)
-        self.robot.push_command()
-        self.robot.arm.wait_until_at_setpoint()
-        self.pub = rospy.Publisher('lift_pos', Float64, queue_size=10)
-        self.pub = rospy.Publisher('arm_pos', Float64, queue_size=10)
-        self.pub = rospy.Publisher('grip_pos', Float64, queue_size=10)
-        self.sub = rospy.Subscriber('arm_move_commands', Float64, self.move_arm_callback)
-        self.sub = rospy.Subscriber('lift_move_commands', Float64, self.move_lift_callback)
+        self.head = self.robot.head
+        self.lift = self.robot.lift
+        self.arm = self.robot.arm
+        self.end_of_arm = self.robot.end_of_arm
+        self.base = self.robot.base
+
+        self.lift.set_soft_motion_limit_min(0.25)
+        self.lift.set_soft_motion_limit_max(1)
+
+        self.arm.set_soft_motion_limit_min(0.25)
+        self.arm.set_soft_motion_limit_max(1)
+
+        self.arm.wait_until_at_setpoint()
+        self.pub_lift = rospy.Publisher('lift_pos', Float64, queue_size=10)
+        self.pub_arm = rospy.Publisher('arm_pos', Float64, queue_size=10)
+        self.pub_grip = rospy.Publisher('grip_pos', Float64, queue_size=10)
+
+        self.sub_arm = rospy.Subscriber('arm_move_commands', Float64, self.move_arm_callback)
+        self.sub_lift = rospy.Subscriber('lift_move_commands', Float64, self.move_lift_callback)
         self.timer = rospy.Timer(rospy.Duration(0.5), self.timer_callback)
         
+    def starting_pose(self):
+        
+
 
     def move_arm_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Arm move command received %f", data.data)
-        # self.robot.base.translate_by(x_m=data.data)
-
-        arm_min = 0.0
-        arm_max = 0.51
-        T = 0.00001
-
         cur_pos = self.robot.arm.status['pos']
         new_pos = cur_pos + data.data
-        if new_pos < arm_min:
-            new_pos = arm_min
-        elif new_pos > arm_max:
-            new_pos = arm_max
-        if (not (abs(new_pos-cur_pos) < T)):
-          self.robot.arm.move_to(new_pos)
-          self.robot.push_command()
-          self.robot.arm.wait_until_at_setpoint()
+        self.robot.arm.move_to(new_pos)
+        self.robot.push_command()
+        self.robot.arm.wait_until_at_setpoint()
 
     def move_lift_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "lift move command received %f", data.data)
-        # self.robot.base.translate_by(x_m=data.data)
-        lift_pos = self.robot.lift.status['pos'] + data.data
-        # if self.arm_pos < 0:
-        #     self.arm_pos = 0
-        self.robot.lift.move_to(lift_pos)
+        cur_pos = self.robot.lift.status['pos']
+        new_pos = cur_pos + data.data
+        self.robot.lift.move_to(new_pos)
         self.robot.push_command()
         self.robot.lift.wait_until_at_setpoint()
+
+    def pan_head_callback(self, data):
+
+    def tilt_head_callback(self, data):
     
     def timer_callback(self, timer):
         lift_pos = self.robot.lift.status['pos']
@@ -60,9 +64,9 @@ class TeleopNode:
         rospy.loginfo("Publishing lift position {}".format(lift_pos))
         rospy.loginfo("Publishing arm position {}".format(arm_pos))
         rospy.loginfo("Publishing gripper position {}".format(grip_pos))
-        self.pub.publish(lift_pos)
-        self.pub.publish(arm_pos)
-        self.pub.publish(grip_pos)
+        self.pub_lift.publish(lift_pos)
+        self.pub_arm.publish(arm_pos)
+        self.pub_grip.publish(grip_pos)
     
     def shutdown_hook(self):
         rospy.loginfo("Shutting down TeleopNode")
