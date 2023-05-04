@@ -5,7 +5,11 @@
 
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/1.1.0/roslib.min.js"></script>
 
-<script type="text/javascript" type="text/javascript">
+<script src="ros_connection.js"></script>
+<script src="listeners.js"></script>
+<script src="commands.js"></script>
+
+<script type="text/javascript">
   var poses = [] // keep track of poses
   var lift_pos = 0.0
   var arm_pos = 0.0
@@ -13,128 +17,6 @@
   var wrist_pos = 0.0
   var head_pan_pos = 0.0
   var head_tilt_pos = 0.0
-  
-  var ros = new ROSLIB.Ros({
-    url : 'ws://localhost:9090'
-  });
-
-  ros.on('connection', function() {
-    document.getElementById("status").innerHTML = "Connected";
-  });
-
-  ros.on('error', function(error) {
-    document.getElementById("status").innerHTML = "Error";
-  });
-
-  ros.on('close', function() {
-    document.getElementById("status").innerHTML = "Closed";
-  });
-
-  var lift_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/lift_pos',
-    messageType : 'std_msgs/Float64'
-  });
-
-  lift_listener.subscribe(function(m) {
-    document.getElementById("lift_msg").innerHTML = m.data.toFixed(4);
-    lift_pos = m.data;
-  });
-
-  var arm_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/arm_pos',
-    messageType : 'std_msgs/Float64'
-  });
-
-  arm_listener.subscribe(function(m) {
-    document.getElementById("arm_msg").innerHTML = m.data.toFixed(4);
-    arm_pos = m.data;
-  });
-
-  var grip_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/grip_pos',
-    messageType : 'std_msgs/Float64'
-  });
-
-  grip_listener.subscribe(function(m) {
-    document.getElementById("grip_msg").innerHTML = m.data.toFixed(4);
-    grip_pos = m.data;
-  });
-
-  var wrist_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/wrist_pos',
-    messageType : 'std_msgs/Float64'
-  });
-
-  wrist_listener.subscribe(function(m) {
-    document.getElementById("wrist_msg").innerHTML = m.data.toFixed(4);
-    wrist_pos = m.data;
-  });
-
-  var head_pan_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/head_pan_pos',
-    messageType : 'std_msgs/Float64'
-  });
-
-  head_pan_listener.subscribe(function(m) {
-    document.getElementById("head_pan_msg").innerHTML = m.data.toFixed(4);
-    head_pan_pos = m.data;
-  });
-
-  var head_tilt_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/head_tilt_pos',
-    messageType : 'std_msgs/Float64'
-  });
-
-  head_tilt_listener.subscribe(function(m) {
-    document.getElementById("head_tilt_msg").innerHTML = m.data.toFixed(4);
-    head_tilt_pos = m.data;
-  });
-
-  arm_cmd_vel_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : "/arm_move_commands",
-    messageType : 'std_msgs/Float64'
-  });
-
-  move_arm = function (direction) {
-    let data = Number(document.getElementById("arm_input").value);
-    if (direction) data *= -1;
-    let move_arm = new ROSLIB.Message({data : data});
-    console.log("In move: " + data);
-    arm_cmd_vel_listener.publish(move_arm);
-  }
-
-  lift_cmd_vel_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : "/lift_move_commands",
-    messageType : 'std_msgs/Float64'
-  });
-
-  move_lift = function (direction) {
-    let data = Number(document.getElementById("arm_input").value);
-    if (direction) data *= -1;
-    let move_lift = new ROSLIB.Message({data : data});
-    console.log("In move: " + data);
-    lift_cmd_vel_listener.publish(move_lift);
-  }
-
-  move_to_pose = function (sing_pose) {
-    let move_pose = new ROSLIB.Message({data : sing_pose});
-    console.log("In move pose: " + sing_pose);
-    pose_cmd_listener.publish(move_pose);
-  }
-
-  pose_cmd_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : "/pose_command",
-    messageType : 'std_msgs/Float64MultiArray'
-  });
 
   save_seq_poses = function () {
     const pose = [
@@ -159,37 +41,52 @@
     anchor.appendChild(button);
   }
 
-  // txt_listener.subscribe(function(m) {
-  //   document.getElementById("msg").innerHTML = m.data;
-  //   move(0.2);
-  // });
 
 </script>
 </head>
 
 <body>
-  <h1>Simple ROS User Interface</h1>
+  <h1>ROS User Interface</h1>
   <p>Connection status: <span id="status"></span></p>
-  <p>Lift position: <span id="lift_msg"></span></p>
-  <p>Arm position: <span id="arm_msg"></span></p>
-  <p>Gripper position: <span id="grip_msg"></span></p>
-  <p>Wrist position: <span id="wrist_msg"></span></p>
   <p>Head Pan position: <span id="head_pan_msg"></span></p>
   <p>Head Tilt position: <span id="head_tilt_msg"></span></p>
-
+  <p>Lift position: <span id="lift_msg"></span></p>
+  <p>Arm position: <span id="arm_msg"></span></p>
+  <p>Wrist position: <span id="wrist_msg"></span></p>
+  <p>Gripper position: <span id="grip_msg"></span></p>
+  
+  
   <div id="saved_poses">
   </div>
 
-
-  <button onclick="move_lift(0)">MOVE UP</button>
-  <button onclick="move_lift(1)">MOVE DOWN</button>
-  <br>
-  <button onclick="move_arm(0)">MOVE OUT</button>
-  <button onclick="move_arm(1)">MOVE IN</button>
   <form id="form">
-    <label for="arm_input">Amount to move arm:</label>
-    <input type="number" id="arm_input" name="arm_input" step="0.05" min="0" max="  0.5"><br><br>
+    <label for="pan_input">Pan Location:</label>
+    <input type="number" id="pan_input" name="pan_input" step="0.05">
+    <br>
+    <label for="tilt_input">Tilt Location:</label>
+    <input type="number" id="tilt_input" name="tilt_input" step="0.05">
+    <br>
+    <label for="lift_input">Lift Location:</label>
+    <input type="number" id="lift_input" name="lift_input" step="0.05" min="0.25" max="1">
+    <br>
+    <label for="arm_input">Arm Location:</label>
+    <input type="number" id="arm_input" name="arm_input" step="0.05" min="0" max="0.5">
+    <br>
+    <label for="wrist_input">Wrist Location:</label>
+    <input type="number" id="wrist_input" name="wrist_input" step="0.1">
+    <br>
+    <label for="grip_input">Gripper Location:</label>
+    <input type="number" id="grip_input" name="grip_input" step="0.05">
+    <br>
   </form>
+
+  <button onclick="move_pan()">Set Pan</button>
+  <button onclick="move_tilt()">Set Tilt</button>
+  <button onclick="move_lift()">Set Lift</button>
+  <button onclick="move_arm()">Set Arm</button>
+  <button onclick="move_wrist()">Set Wrist</button>
+  <button onclick="move_grip()">Set Grip</button>
+  <br><br>
   <button onclick="save_seq_poses()">Save Poses</button>
 </body>
 </html>
