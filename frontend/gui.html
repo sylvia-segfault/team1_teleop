@@ -6,6 +6,14 @@
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/1.1.0/roslib.min.js"></script>
 
 <script type="text/javascript" type="text/javascript">
+  var poses = [] // keep track of poses
+  var lift_pos = 0.0
+  var arm_pos = 0.0
+  var gripper_pos = 0.0
+  var wrist_pos = 0.0
+  var head_pan_pos = 0.0
+  var head_tilt_pos = 0.0
+  
   var ros = new ROSLIB.Ros({
     url : 'ws://localhost:9090'
   });
@@ -30,6 +38,7 @@
 
   lift_listener.subscribe(function(m) {
     document.getElementById("lift_msg").innerHTML = m.data.toFixed(4);
+    lift_pos = m.data;
   });
 
   var arm_listener = new ROSLIB.Topic({
@@ -40,6 +49,7 @@
 
   arm_listener.subscribe(function(m) {
     document.getElementById("arm_msg").innerHTML = m.data.toFixed(4);
+    arm_pos = m.data;
   });
 
   var grip_listener = new ROSLIB.Topic({
@@ -50,8 +60,41 @@
 
   grip_listener.subscribe(function(m) {
     document.getElementById("grip_msg").innerHTML = m.data.toFixed(4);
+    grip_pos = m.data;
   });
 
+  var wrist_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/wrist_pos',
+    messageType : 'std_msgs/Float64'
+  });
+
+  wrist_listener.subscribe(function(m) {
+    document.getElementById("wrist_msg").innerHTML = m.data.toFixed(4);
+    wrist_pos = m.data;
+  });
+
+  var head_pan_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/head_pan_pos',
+    messageType : 'std_msgs/Float64'
+  });
+
+  head_pan_listener.subscribe(function(m) {
+    document.getElementById("head_pan_msg").innerHTML = m.data.toFixed(4);
+    head_pan_pos = m.data;
+  });
+
+  var head_tilt_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/head_tilt_pos',
+    messageType : 'std_msgs/Float64'
+  });
+
+  head_tilt_listener.subscribe(function(m) {
+    document.getElementById("head_tilt_msg").innerHTML = m.data.toFixed(4);
+    head_tilt_pos = m.data;
+  });
 
   arm_cmd_vel_listener = new ROSLIB.Topic({
     ros : ros,
@@ -60,9 +103,9 @@
   });
 
   move_arm = function (direction) {
-    var data = Number(document.getElementById("arm_input").value);
+    let data = Number(document.getElementById("arm_input").value);
     if (direction) data *= -1;
-    var move_arm = new ROSLIB.Message({data : data});
+    let move_arm = new ROSLIB.Message({data : data});
     console.log("In move: " + data);
     arm_cmd_vel_listener.publish(move_arm);
   }
@@ -74,17 +117,53 @@
   });
 
   move_lift = function (direction) {
-    var data = Number(document.getElementById("arm_input").value);
+    let data = Number(document.getElementById("arm_input").value);
     if (direction) data *= -1;
-    var move_lift = new ROSLIB.Message({data : data});
+    let move_lift = new ROSLIB.Message({data : data});
     console.log("In move: " + data);
     lift_cmd_vel_listener.publish(move_lift);
+  }
+
+  move_to_pose = function (sing_pose) {
+    let move_pose = new ROSLIB.Message({data : sing_pose});
+    console.log("In move pose: " + sing_pose);
+    pose_cmd_listener.publish(move_pose);
+  }
+
+  pose_cmd_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : "/pose_command",
+    messageType : 'std_msgs/Float64MultiArray'
+  });
+
+  save_seq_poses = function () {
+    const pose = [
+      Number(lift_pos),
+      Number(arm_pos),
+      Number(gripper_pos),
+      Number(wrist_pos),
+      Number(head_pan_pos),
+      Number(head_tilt_pos),
+    ]
+    poses.push(pose)
+
+    const anchor = document.getElementById("saved_poses");
+    const num = poses.length;
+    const button = document.createElement('button');
+    button.setAttribute('name', 'pose' + num);
+    button.setAttribute('text', 'pose ' + num);
+    button.textContent = 'pose ' + num;
+    button.onclick = function() {
+      move_to_pose(pose);
+    }
+    anchor.appendChild(button);
   }
 
   // txt_listener.subscribe(function(m) {
   //   document.getElementById("msg").innerHTML = m.data;
   //   move(0.2);
   // });
+
 </script>
 </head>
 
@@ -94,6 +173,14 @@
   <p>Lift position: <span id="lift_msg"></span></p>
   <p>Arm position: <span id="arm_msg"></span></p>
   <p>Gripper position: <span id="grip_msg"></span></p>
+  <p>Wrist position: <span id="wrist_msg"></span></p>
+  <p>Head Pan position: <span id="head_pan_msg"></span></p>
+  <p>Head Tilt position: <span id="head_tilt_msg"></span></p>
+
+  <div id="saved_poses">
+  </div>
+
+
   <button onclick="move_lift(0)">MOVE UP</button>
   <button onclick="move_lift(1)">MOVE DOWN</button>
   <br>
@@ -101,7 +188,8 @@
   <button onclick="move_arm(1)">MOVE IN</button>
   <form id="form">
     <label for="arm_input">Amount to move arm:</label>
-    <input type="number" id="arm_input" name="arm_input" step="0.05" min="0" max="0.5"><br><br>
+    <input type="number" id="arm_input" name="arm_input" step="0.05" min="0" max="  0.5"><br><br>
   </form>
+  <button onclick="save_seq_poses()">Save Poses</button>
 </body>
 </html>
