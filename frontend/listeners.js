@@ -62,6 +62,6 @@
 
   grip_listener.subscribe(function(m) {
     document.getElementById("grip_msg").innerHTML = m.data.toFixed(4);
-    grip_pos = m.data;
+    gripper_pos = m.data;
   });
 
