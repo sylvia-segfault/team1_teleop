@@ -4,12 +4,14 @@ the robot's arm position, and the subscribers receives arm move commands.
 """
 import rospy
 import stretch_body.robot
+import stretch_body.stretch_gripper
 from std_msgs.msg import Float64, Float64MultiArray
 
 class TeleopNode:
 
     def __init__(self):
         self.robot = stretch_body.robot.Robot()
+        self.gripper = stretch_body.stretch_gripper.StretchGripper()
         self.robot.startup()
         self.head = self.robot.head
         self.lift = self.robot.lift
@@ -35,6 +37,7 @@ class TeleopNode:
         self.set_motion_limits
         
         self.timer = rospy.Timer(rospy.Duration(0.5), self.timer_callback)
+        rospy.loginfo("Node initialized")
     
     def set_motion_limits(self):
         self.lift.set_soft_motion_limit_min(0.25)
@@ -46,7 +49,7 @@ class TeleopNode:
     def move_to_pose(self, coords):
         self.robot.lift.move_to(coords[0])
         self.robot.arm.move_to(coords[1])
-        self.end_of_arm.move_to('stretch_gripper', coords[2])
+        self.end_of_arm.move_to('stretch_gripper', self.gripper.world_rad_to_pct(coords[2]))
         self.end_of_arm.move_to('wrist_yaw', coords[3])
         self.head.move_to('head_pan', coords[4])
         self.head.move_to('head_tilt', coords[5])
@@ -89,10 +92,11 @@ class TeleopNode:
         self.end_of_arm.move_to('wrist_yaw', data.data)
         self.robot.push_command()
         self.end_of_arm.get_joint('wrist_yaw').wait_until_at_setpoint()
-
+    
     def move_grip_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Gripper move command received %f", data.data)
-        self.end_of_arm.move_to('stretch_gripper', data.data)
+        pct_unit = self.gripper.world_rad_to_pct(data.data)
+        self.end_of_arm.move_to('stretch_gripper', pct_unit)
         self.robot.push_command()
         self.end_of_arm.get_joint('stretch_gripper').wait_until_at_setpoint()
 
@@ -114,12 +118,7 @@ class TeleopNode:
         head_pan = self.robot.head.status['head_pan']['pos']
         head_tilt = self.robot.head.status['head_tilt']['pos']
 
-        # rospy.loginfo("Publishing lift position {}".format(lift_pos))
-        # rospy.loginfo("Publishing arm position {}".format(arm_pos))
-        # rospy.loginfo("Publishing gripper position {}".format(grip_pos))
-        # rospy.loginfo("Publishing wrist position {}".format(wrist_pos))
-        # rospy.loginfo("Publishing head pan position {}".format(head_pan))
-        # rospy.loginfo("Publishing head tilt position {}".format(head_tilt))
+        # rospy.loginfo("Publishing lift {}, arm {}, gripper {}, wrist {}, head pan {}, head tilt {}". format(lift_pos, arm_pos, grip_pos, wrist_pos, head_pan, head_tilt))
         self.pub_lift.publish(lift_pos)
         self.pub_arm.publish(arm_pos)
         self.pub_grip.publish(grip_pos)
