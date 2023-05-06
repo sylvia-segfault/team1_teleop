@@ -88,4 +88,16 @@ move_to_pose = function (sing_pose) {
     pose_cmd.publish(msg);
 }
 
+move_all = function () {
+  let all_joints = [
+    Number(lift_pos),
+    Number(arm_pos),
+    Number(gripper_pos),
+    Number(wrist_pos),
+    Number(head_pan_pos),
+    Number(head_tilt_pos),
+  ]
+  move_to_pose(all_joints);
+}
+
   
