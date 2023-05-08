@@ -34,6 +34,14 @@ class TeleopNode:
         self.sub_wrist = rospy.Subscriber('wrist_cmd', Float64, self.move_wrist_callback)
         self.sub_pose = rospy.Subscriber('pose_cmd', Float64MultiArray, self.move_pose_callback)
 
+        self.sub_translate_forward = rospy.Subscriber('translate_forward_cmd', Float64, self.translate_forward_callback)
+        self.sub_translate_backward = rospy.Subscriber('translate_backward_cmd', Float64, self.translate_backward_callback)
+        self.sub_translate_stop = rospy.Subscriber('translate_stop_cmd', Float64, self.translate_stop_callback)
+
+        self.sub_rotate_left = rospy.Subscriber('rotate_left_cmd', Float64, self.rotate_left_callback)
+        self.sub_rotate_right = rospy.Subscriber('rotate_right_cmd', Float64, self.rotate_right_callback)
+        self.sub_rotate_stop = rospy.Subscriber('rotate_stop_cmd', Float64, self.rotate_stop_callback)
+
         self.set_motion_limits
         
         self.timer = rospy.Timer(rospy.Duration(0.5), self.timer_callback)
@@ -62,6 +70,9 @@ class TeleopNode:
         self.end_of_arm.get_joint('wrist_yaw').wait_until_at_setpoint()
         self.head.get_joint('head_pan').wait_until_at_setpoint()
         self.head.get_joint('head_tilt').wait_until_at_setpoint()
+
+    def move_pose_callback(self, data):
+        self.move_to_pose(data.data)
 
     def move_head_pan_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Head pan move command received %f", data.data)
@@ -100,16 +111,30 @@ class TeleopNode:
         self.robot.push_command()
         self.end_of_arm.get_joint('stretch_gripper').wait_until_at_setpoint()
 
-    def move_pose_callback(self, data):
-        self.move_to_pose(data.data)
-        
+    def translate_forward_callback(self):
+        rospy.loginfo(rospy.get_caller_id() + "Base forward command received")
+        self.base.set_translational_velocity(v_r=0.1)
 
-    def pan_head_callback(self, data):
-        pass
+    def translate_backward_callback(self):
+        rospy.loginfo(rospy.get_caller_id() + "Base backwards command received")
+        self.base.set_translational_velocity(v_r=-0.1)
 
-    def tilt_head_callback(self, data):
-        pass
+    def translate_stop_callback(self):
+        rospy.loginfo(rospy.get_caller_id() + "Base forward command received")
+        self.base.set_translational_velocity(v_r=0.0)    
     
+    def rotate_left_callback(self):
+        rospy.loginfo(rospy.get_caller_id() + "Rotate left command received")
+        self.base.set_rotational_velocity(v_r=-0.1)
+
+    def rotate_right_callback(self):
+        rospy.loginfo(rospy.get_caller_id() + "Rotate right command received")
+        self.base.set_rotational_velocity(v_r=0.1)
+
+    def rotate_stop_callback(self):
+        rospy.loginfo(rospy.get_caller_id() + "Rotate stop command received")
+        self.base.set_rotational_velocity(v_r=0.0)
+
     def timer_callback(self, timer):
         lift_pos = self.robot.lift.status['pos']
         arm_pos = self.robot.arm.status['pos']

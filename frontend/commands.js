@@ -100,4 +100,76 @@ move_all = function () {
   move_to_pose(all_joints);
 }
 
+translate_forward_cmd = new ROSLIB.Topic({
+  ros : ros,
+  name : "/translate_forward_cmd",
+  messageType : 'std_msgs/Float64'
+});
+
+translate_forward = function () {
+  let msg = new ROSLIB.Message({data : 0});
+  console.log("translate forward");
+  translate_forward_cmd.publish(msg);
+}
+
+translate_backward_cmd = new ROSLIB.Topic({
+  ros : ros,
+  name : "/translate_backward_cmd",
+  messageType : 'std_msgs/Float64'
+});
+
+translate_backward = function () {
+  let msg = new ROSLIB.Message({data : 0});
+  console.log("translate backward");
+  translate_backward_cmd.publish(msg);
+}
+
+translate_stop_cmd = new ROSLIB.Topic({
+  ros : ros,
+  name : "/translate_stop_cmd",
+  messageType : 'std_msgs/Float64'
+});
+
+translate_stop = function () {
+  let msg = new ROSLIB.Message({data : 0});
+  console.log("translate stop");
+  translate_stop_cmd.publish(msg);
+}
+
+rotate_left_cmd = new ROSLIB.Topic({
+  ros : ros,
+  name : "/rotate_left_cmd",
+  messageType : 'std_msgs/Float64'
+});
+
+rotate_left = function () {
+  let msg = new ROSLIB.Message({data : 0});
+  console.log("rotate left");
+  rotate_left_cmd.publish(msg);
+}
+
+rotate_right_cmd = new ROSLIB.Topic({
+  ros : ros,
+  name : "/rotate_right_cmd",
+  messageType : 'std_msgs/Float64'
+});
+
+rotate_right = function () {
+  let msg = new ROSLIB.Message({data : 0});
+  console.log("rotate right");
+  rotate_right_cmd.publish(msg);
+}
+
+rotate_stop_cmd = new ROSLIB.Topic({
+  ros : ros,
+  name : "/rotate_stop_cmd",
+  messageType : 'std_msgs/Float64'
+});
+
+rotate_stop = function () {
+  let msg = new ROSLIB.Message({data : 0});
+  console.log("rotate stop");
+  rotate_stop_cmd.publish(msg);
+}
+
   

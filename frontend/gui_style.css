@@ -21,7 +21,18 @@ input[type=number], select {
   font-size: 16px;
   display: inline-block;
 }
-.set_button, .pose_button {
+.inputs, .base_control { display: inline-block; }
+
+.base_control { 
+  width: 300px;
+  margin: 2px 2px 0px 50px; 
+}
+
+.set_button, 
+.pose_button, 
+.forward_button,
+.lr_button,
+.backward_button {
   background-color: #e9e9e9d9;
   border: 1px solid #000000;
   border-radius: 3px;
@@ -37,7 +48,15 @@ input[type=number], select {
   font-family: Arial, Helvetica, sans-serif;
   margin: 2px 0;
 }
-.set_button:active { background-color: #1c1b1b40; }
+.pose_button { margin: 2px 4px 2px 0px; }
+.forward_button { margin: 2px 2px 2px 79px; width: 100px; }
+.lr_button { width: 75px; }
+.backward_button { width: 100px; }
+.pose_button:active, 
+.set_button:active, 
+.forward_button:active,
+.lr_button:active,
+.backward_button:active { background-color: #1c1b1b40; }
 .label {
   color: rgb(7, 7, 7);
   box-sizing: border-box;
@@ -49,7 +68,3 @@ input[type=number], select {
   height: 30px;
   margin: auto;
 }
-.pose_button {
-  margin: 2px 4px 2px 0px;
-}
-.pose_button:active { background-color: #1c1b1b40; }
