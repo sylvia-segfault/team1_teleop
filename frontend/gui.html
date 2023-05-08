@@ -32,10 +32,13 @@
     const anchor = document.getElementById("saved_poses");
     const num = poses.length;
     const button = document.createElement('button');
-    button.setAttribute('name', 'pose' + num);
-    button.setAttribute('text', 'pose ' + num);
-    button.setAttribute('class', 'pose_button');
-    button.textContent = 'pose ' + num;
+    const name = document.getElementById("pose_name").value;
+    console.log(name)
+    document.getElementById("pose_name").value = "";
+    button.setAttribute('name', name);
+    button.setAttribute('text', name);
+    button.setAttribute('class', name);
+    button.textContent = name;
     button.onclick = function() {
       move_to_pose(pose);
     }
@@ -82,8 +85,10 @@
     <input type="number" id="grip_input" name="grip_input" step="1" min="-7.8" max="5.2">
     <button class="set_button" type="button" onclick="move_grip()">Set Gripper</button>
     <br>
-    <button class="set_button" type="button" onclick="save_seq_poses()">Save Pose</button>
     <button class="set_button" type="button" onclick="move_all()">Set All</button>
+    <br>
+    <input type="text" id="pose_name" name="pose_name">
+    <button class="set_button" type="button" onclick="save_seq_poses()">Save Pose</button>
   </form>  
   
   <div class="base_control">
