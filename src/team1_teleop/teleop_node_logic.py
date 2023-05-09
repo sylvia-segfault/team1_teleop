@@ -6,6 +6,7 @@ import rospy
 import stretch_body.robot
 import stretch_body.stretch_gripper
 from std_msgs.msg import Float64, Float64MultiArray
+from team1_teleop.msg import FrontEnd
 import time
 
 class TeleopNode:
@@ -33,7 +34,8 @@ class TeleopNode:
         self.sub_arm = rospy.Subscriber('arm_cmd', Float64, self.move_arm_callback)
         self.sub_grip = rospy.Subscriber('grip_cmd', Float64, self.move_grip_callback)
         self.sub_wrist = rospy.Subscriber('wrist_cmd', Float64, self.move_wrist_callback)
-        self.sub_pose = rospy.Subscriber('pose_cmd', Float64MultiArray, self.move_pose_callback)
+        # self.sub_pose = rospy.Subscriber('pose_cmd', Float64MultiArray, self.move_pose_callback)
+        self.sub_pose = rospy.Subscriber('pose2_cmd', FrontEnd, self.move_to_pose_2)
 
         self.sub_translate_base = rospy.Subscriber('translate_base_cmd', Float64, self.translate_base_callback)
         self.sub_rotate_base = rospy.Subscriber('rotate_base_cmd', Float64, self.rotate_base_callback)
@@ -57,6 +59,24 @@ class TeleopNode:
         self.end_of_arm.move_to('wrist_yaw', coords[3])
         self.head.move_to('head_pan', coords[4])
         self.head.move_to('head_tilt', coords[5])
+        
+        self.robot.push_command()
+
+        self.lift.wait_until_at_setpoint()
+        self.arm.wait_until_at_setpoint()
+        self.end_of_arm.get_joint('stretch_gripper').wait_until_at_setpoint()
+        self.end_of_arm.get_joint('wrist_yaw').wait_until_at_setpoint()
+        self.head.get_joint('head_pan').wait_until_at_setpoint()
+        self.head.get_joint('head_tilt').wait_until_at_setpoint()
+    
+    def move_to_pose_2(self, msg):
+        rospy.loginfo(msg)
+        self.robot.lift.move_to(msg.lift)
+        self.robot.arm.move_to(msg.arm)
+        self.end_of_arm.move_to('stretch_gripper', self.gripper.world_rad_to_pct(msg.grip))
+        self.end_of_arm.move_to('wrist_yaw', msg.wrist)
+        self.head.move_to('head_pan', msg.head_pan)
+        self.head.move_to('head_tilt', msg.head_tilt)
         
         self.robot.push_command()
 

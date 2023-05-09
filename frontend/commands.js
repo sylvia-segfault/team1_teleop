@@ -100,6 +100,26 @@ move_all = function () {
   move_to_pose(all_joints);
 }
 
+pos_cmd2 = new ROSLIB.Topic({
+  ros: ros,
+  name : "/pose2_cmd",
+  messageType: 'team1_teleop/FrontEnd'
+});
+
+move_to_pose_2 = function () {
+  let msg = new ROSLIB.Message(
+    {
+      pose_type : document.getElementById("frame_select").value,
+      head_pan : head_pan_pos,
+      head_tilt : head_tilt_pos,
+      lift : lift_pos,
+      arm : arm_pos,
+      grip : gripper_pos,
+      wrist : wrist_pos
+    });
+  pos_cmd2.publish(msg);
+}
+
 translate_base_cmd = new ROSLIB.Topic({
   ros : ros,
   name : "/translate_base_cmd",

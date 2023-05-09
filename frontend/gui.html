@@ -44,7 +44,7 @@
     button.setAttribute('class', 'pose_button');
     button.textContent = name;
     button.onclick = function() {
-      move_to_pose(pose);
+      move_to_pose_2(pose);
     }
     anchor.appendChild(button);
   }
@@ -99,7 +99,8 @@
     <input type="number" id="grip_input" name="grip_input" step="1" min="-7.8" max="5.2">
     <button class="set_button" type="button" onclick="move_grip()">Set Gripper</button>
     <br>
-    <button class="set_all_button" type="button" onclick="move_all()">Set All</button>
+    <!-- <button class="set_all_button" type="button" onclick="move_all()">Set All</button> -->
+    <button class="set_all_button" type="button" onclick="move_to_pose_2()">Set All</button>
     <br>
     <input type="text" id="pose_name" name="pose_name">
     <button class="set_button" type="button" onclick="save_seq_poses()">Save Pose</button>
