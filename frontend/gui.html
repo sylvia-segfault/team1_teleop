@@ -89,7 +89,7 @@
     <input type="number" id="grip_input" name="grip_input" step="1" min="-7.8" max="5.2">
     <button class="set_button" type="button" onclick="move_grip()">Set Gripper</button>
     <br>
-    <button class="set_button" type="button" onclick="move_all()">Set All</button>
+    <button class="set_all_button" type="button" onclick="move_all()">Set All</button>
     <br>
     <input type="text" id="pose_name" name="pose_name">
     <button class="set_button" type="button" onclick="save_seq_poses()">Save Pose</button>
@@ -99,10 +99,14 @@
     <p>Use with EXTREME CAUTION, this is untested and might cause a runaway robot</p>
     <p>press and hold</p>
   
-    <button class="forward_button" onmousedown="translate_forward()" onmouseup="translate_stop()" >forward</button><br>
-    <button class="lr_button" onmousedown="rotate_left()" onmouseup="rotate_stop()">left</button> 
-    <button class="backward_button" onmousedown="translate_backward()" onmouseup="translate_stop()">backward</button>
-    <button class="lr_button" onmousedown="rotate_right()" onmouseup="rotate_stop()">right</button>
+    <button class="forward_button"
+            onmousedown="mousedown('translate', 0.1)" onmouseup="mouseup()">forward</button><br>
+    <button class="lr_button"
+            onmousedown="mousedown('rotate', 0.1)" onmouseup="mouseup()">left</button> 
+    <button class="backward_button" 
+            onmousedown="mousedown('translate', -0.1)" onmouseup="mouseup()">backward</button>
+    <button class="lr_button"
+            onmousedown="mousedown('rotate', -0.1)" onmouseup="mouseup()">right</button>
   </div>
   
   <div id="saved_poses">

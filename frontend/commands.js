@@ -100,9 +100,15 @@ move_all = function () {
   move_to_pose(all_joints);
 }
 
-translate_forward_cmd = new ROSLIB.Topic({
+translate_base_cmd = new ROSLIB.Topic({
   ros : ros,
-  name : "/translate_forward_cmd",
+  name : "/translate_base_cmd",
+  messageType : 'std_msgs/Float64'
+});
+
+rotate_base_cmd = new ROSLIB.Topic({
+  ros : ros,
+  name : "/rotate_left_cmd",
   messageType : 'std_msgs/Float64'
 });
 
@@ -112,35 +118,7 @@ translate_forward = function () {
   translate_forward_cmd.publish(msg);
 }
 
-translate_backward_cmd = new ROSLIB.Topic({
-  ros : ros,
-  name : "/translate_backward_cmd",
-  messageType : 'std_msgs/Float64'
-});
 
-translate_backward = function () {
-  let msg = new ROSLIB.Message({data : 0});
-  console.log("translate backward");
-  translate_backward_cmd.publish(msg);
-}
-
-translate_stop_cmd = new ROSLIB.Topic({
-  ros : ros,
-  name : "/translate_stop_cmd",
-  messageType : 'std_msgs/Float64'
-});
-
-translate_stop = function () {
-  let msg = new ROSLIB.Message({data : 0});
-  console.log("translate stop");
-  translate_stop_cmd.publish(msg);
-}
-
-rotate_left_cmd = new ROSLIB.Topic({
-  ros : ros,
-  name : "/rotate_left_cmd",
-  messageType : 'std_msgs/Float64'
-});
 
 rotate_left = function () {
   let msg = new ROSLIB.Message({data : 0});
@@ -148,28 +126,34 @@ rotate_left = function () {
   rotate_left_cmd.publish(msg);
 }
 
-rotate_right_cmd = new ROSLIB.Topic({
-  ros : ros,
-  name : "/rotate_right_cmd",
-  messageType : 'std_msgs/Float64'
-});
+var mousedownID = -1;  //Global ID of mouse down interval
+function mousedown(type, data) {
+  console.log("mouse down");
+  if(mousedownID==-1)  //Prevent multimple loops!
+     mousedownID = setInterval(whilemousedown(type, data), 100 /*execute every 100ms*/);
 
-rotate_right = function () {
-  let msg = new ROSLIB.Message({data : 0});
-  console.log("rotate right");
-  rotate_right_cmd.publish(msg);
+
 }
+function mouseup() {
+  console.log("mouse up");
+  if(mousedownID!=-1) {  //Only stop if exists
+    clearInterval(mousedownID);
+    mousedownID=-1;
+  }
 
-rotate_stop_cmd = new ROSLIB.Topic({
-  ros : ros,
-  name : "/rotate_stop_cmd",
-  messageType : 'std_msgs/Float64'
-});
-
-rotate_stop = function () {
-  let msg = new ROSLIB.Message({data : 0});
-  console.log("rotate stop");
-  rotate_stop_cmd.publish(msg);
 }
+function whilemousedown(type, data) {
+   let msg = new ROSLIB.Message({data : data});
+   if (type === "translate") {
+    console.log("translate base");
+    translate_base_cmd.publish(msg);
+   } else if (type === "rotate") {
+    console.log("rotate base");
+    rotate_base_cmd.publish(msg);
+   }
+
+}
+//Also clear the interval when user leaves the window with mouse
+//document.addEventListener("mouseout", mouseup);
 
   

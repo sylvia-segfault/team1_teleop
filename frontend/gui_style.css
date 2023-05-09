@@ -9,7 +9,7 @@
   height: 20px;
   margin: auto;
 }
-input[type=number], select {
+input[type=number], input[type=text], select {
   width: 150px;
   height: 40px;
   padding: 5px 15px;
@@ -28,7 +28,8 @@ input[type=number], select {
   margin: 2px 2px 0px 50px; 
 }
 
-.set_button, 
+.set_button,
+.set_all_button,  
 .pose_button, 
 .forward_button,
 .lr_button,
@@ -49,11 +50,13 @@ input[type=number], select {
   margin: 2px 0;
 }
 .pose_button { margin: 2px 4px 2px 0px; }
+.set_all_button { width: 304px; }
 .forward_button { margin: 2px 2px 2px 79px; width: 100px; }
 .lr_button { width: 75px; }
 .backward_button { width: 100px; }
 .pose_button:active, 
 .set_button:active, 
+.set_all_button:active,
 .forward_button:active,
 .lr_button:active,
 .backward_button:active { background-color: #1c1b1b40; }
