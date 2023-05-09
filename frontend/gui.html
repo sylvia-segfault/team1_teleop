@@ -33,11 +33,15 @@
     const num = poses.length;
     const button = document.createElement('button');
     const name = document.getElementById("pose_name").value;
+    if (name === '') {
+      alert("please provide name");
+      return;
+    }
     console.log(name)
     document.getElementById("pose_name").value = "";
     button.setAttribute('name', name);
     button.setAttribute('text', name);
-    button.setAttribute('class', name);
+    button.setAttribute('class', 'pose_button');
     button.textContent = name;
     button.onclick = function() {
       move_to_pose(pose);
@@ -95,8 +99,8 @@
     <p>Use with EXTREME CAUTION, this is untested and might cause a runaway robot</p>
     <p>press and hold</p>
   
-    <button class="forward_button" onmousedown="translate_forward()" onmouseup="translate_stop()">forward</button><br>
-    <button class="lr_button" onmousedown="rotate_left()" onmouseup="rotate_stop()">left</button>
+    <button class="forward_button" onmousedown="translate_forward()" onmouseup="translate_stop()" >forward</button><br>
+    <button class="lr_button" onmousedown="rotate_left()" onmouseup="rotate_stop()">left</button> 
     <button class="backward_button" onmousedown="translate_backward()" onmouseup="translate_stop()">backward</button>
     <button class="lr_button" onmousedown="rotate_right()" onmouseup="rotate_stop()">right</button>
   </div>

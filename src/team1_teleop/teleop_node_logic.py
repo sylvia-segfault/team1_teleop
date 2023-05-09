@@ -6,6 +6,7 @@ import rospy
 import stretch_body.robot
 import stretch_body.stretch_gripper
 from std_msgs.msg import Float64, Float64MultiArray
+import time
 
 class TeleopNode:
 
@@ -111,29 +112,46 @@ class TeleopNode:
         self.robot.push_command()
         self.end_of_arm.get_joint('stretch_gripper').wait_until_at_setpoint()
 
-    def translate_forward_callback(self):
+    def translate_forward_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Base forward command received")
-        self.base.set_translational_velocity(v_r=0.1)
+        self.base.set_translate_velocity(v_m=0.1)
+        self.robot.push_command()
+        # self.robot.base.translate_by(x_m=0.5)
+        # self.robot.push_command()
+        # time.sleep(4.0) #wait
 
-    def translate_backward_callback(self):
+        # self.robot.base.set_translate_velocity(v_m=0.1) #switch to velocity controller
+        # self.robot.push_command()
+        # time.sleep(8.0) #wait
+
+        # self.robot.base.set_translate_velocity(v_m=0.0) #stop motion
+        # self.robot.push_command()
+        
+
+    def translate_backward_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Base backwards command received")
-        self.base.set_translational_velocity(v_r=-0.1)
+        self.base.set_translate_velocity(v_m=-0.1)
+        self.robot.push_command()
 
-    def translate_stop_callback(self):
-        rospy.loginfo(rospy.get_caller_id() + "Base forward command received")
-        self.base.set_translational_velocity(v_r=0.0)    
+    def translate_stop_callback(self, data):
+        rospy.loginfo(rospy.get_caller_id() + "Base stop command received")
+        self.base.set_translate_velocity(v_m=0.0)
+        self.robot.push_command()    
     
-    def rotate_left_callback(self):
+    def rotate_left_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Rotate left command received")
         self.base.set_rotational_velocity(v_r=-0.1)
+        self.robot.push_command()
 
-    def rotate_right_callback(self):
+    def rotate_right_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Rotate right command received")
         self.base.set_rotational_velocity(v_r=0.1)
+        self.robot.push_command()
 
-    def rotate_stop_callback(self):
+    def rotate_stop_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Rotate stop command received")
         self.base.set_rotational_velocity(v_r=0.0)
+        self.robot.push_command()
 
     def timer_callback(self, timer):
         lift_pos = self.robot.lift.status['pos']
