@@ -10,7 +10,7 @@
 <script src="commands.js"></script>
 
 <script type="text/javascript">
-  var poses = [] // keep track of poses
+  var poses = {} // keep track of poses
   var lift_pos = 0.0
   var arm_pos = 0.0
   var gripper_pos = 0.0
@@ -18,19 +18,19 @@
   var head_pan_pos = 0.0
   var head_tilt_pos = 0.0
 
-  save_seq_poses = function () {
-    const pose = [
-      Number(lift_pos),
-      Number(arm_pos),
-      Number(gripper_pos),
-      Number(wrist_pos),
-      Number(head_pan_pos),
-      Number(head_tilt_pos),
-    ]
-    poses.push(pose)
+  save_seq_poses = function (pose_name) {
+    const pose = {
+      pose_type : document.getElementById("frame_select").value,
+      head_pan : head_pan_pos,
+      head_tilt : head_tilt_pos,
+      lift : lift_pos,
+      arm : arm_pos,
+      grip : gripper_pos,
+      wrist : wrist_pos
+    }
+    poses[pose_name] = pose;
 
     const anchor = document.getElementById("saved_poses");
-    const num = poses.length;
     const button = document.createElement('button');
     const name = document.getElementById("pose_name").value;
     if (name === '') {
@@ -44,7 +44,7 @@
     button.setAttribute('class', 'pose_button');
     button.textContent = name;
     button.onclick = function() {
-      move_to_pose_2(pose);
+      move_to_pose(pose);
     }
     anchor.appendChild(button);
   }
@@ -99,8 +99,7 @@
     <input type="number" id="grip_input" name="grip_input" step="1" min="-7.8" max="5.2">
     <button class="set_button" type="button" onclick="move_grip()">Set Gripper</button>
     <br>
-    <!-- <button class="set_all_button" type="button" onclick="move_all()">Set All</button> -->
-    <button class="set_all_button" type="button" onclick="move_to_pose_2()">Set All</button>
+    <button class="set_all_button" type="button" onclick="move_all()">Set All</button>
     <br>
     <input type="text" id="pose_name" name="pose_name">
     <button class="set_button" type="button" onclick="save_seq_poses()">Save Pose</button>

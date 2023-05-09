@@ -76,47 +76,27 @@ move_grip = function () {
     grip_cmd.publish(msg);
 }
 
-pose_cmd = new ROSLIB.Topic({
-    ros : ros,
-    name : "/pose_cmd",
-    messageType : 'std_msgs/Float64MultiArray'
-});
-
-move_to_pose = function (sing_pose) {
-    let msg = new ROSLIB.Message({data : sing_pose});
-    console.log("In move pose: " + sing_pose);
-    pose_cmd.publish(msg);
-}
-
 move_all = function () {
-  let all_joints = [
-    Number(lift_pos),
-    Number(arm_pos),
-    Number(gripper_pos),
-    Number(wrist_pos),
-    Number(head_pan_pos),
-    Number(head_tilt_pos),
-  ]
+  const all_joints = {
+    pose_type : document.getElementById("frame_select").value,
+    head_pan : Number(document.getElementById("pan_input").value),
+    head_tilt : Number(document.getElementById("tilt_input").value),
+    lift : Number(document.getElementById("lift_input").value),
+    arm : Number(document.getElementById("arm_input").value),
+    grip : Number(document.getElementById("grip_input").value),
+    wrist : Number(document.getElementById("wrist_input").value)
+  }
   move_to_pose(all_joints);
 }
 
-pos_cmd2 = new ROSLIB.Topic({
+pos_cmd = new ROSLIB.Topic({
   ros: ros,
-  name : "/pose2_cmd",
+  name : "/pose_cmd",
   messageType: 'team1_teleop/FrontEnd'
 });
 
-move_to_pose_2 = function () {
-  let msg = new ROSLIB.Message(
-    {
-      pose_type : document.getElementById("frame_select").value,
-      head_pan : head_pan_pos,
-      head_tilt : head_tilt_pos,
-      lift : lift_pos,
-      arm : arm_pos,
-      grip : gripper_pos,
-      wrist : wrist_pos
-    });
+move_to_pose = function (sgl_pose) {
+  let msg = new ROSLIB.Message(sgl_pose);
   pos_cmd2.publish(msg);
 }
 
@@ -128,23 +108,9 @@ translate_base_cmd = new ROSLIB.Topic({
 
 rotate_base_cmd = new ROSLIB.Topic({
   ros : ros,
-  name : "/rotate_left_cmd",
+  name : "/rotate_base_cmd",
   messageType : 'std_msgs/Float64'
 });
-
-translate_forward = function () {
-  let msg = new ROSLIB.Message({data : 0});
-  console.log("translate forward");
-  translate_forward_cmd.publish(msg);
-}
-
-
-
-rotate_left = function () {
-  let msg = new ROSLIB.Message({data : 0});
-  console.log("rotate left");
-  rotate_left_cmd.publish(msg);
-}
 
 var mousedownID = -1;  //Global ID of mouse down interval
 var move_type = '';
@@ -154,7 +120,7 @@ function mousedown(type, data) {
   move_type = type;
   move_amount = data;
   if(mousedownID==-1)  //Prevent multimple loops!
-     mousedownID = setInterval(whilemousedown, 100 /*execute every 100ms*/);
+     mousedownID = setInterval(whilemousedown, 500 /*execute every 100ms*/);
 
 
 }
