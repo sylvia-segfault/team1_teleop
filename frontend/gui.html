@@ -65,6 +65,16 @@
 
   
   <form id="form" class="inputs">
+
+    <label for="frame_select">Choose a coordinate frame:</label>
+    <br>
+    <select name="frame_select" id="frame_select">
+      <option value="world_coord">Robot's Start Pose</option>
+      <option value="base_link">Robot's Base</option>
+      <option value="walker_center">Walker's Center</option>
+    </select>
+
+    <br>
     
     <input type="number" id="pan_input" name="pan_input" step="0.05">
     <button class="set_button" type="button" onclick="move_pan()">Set Pan</button>
@@ -111,9 +121,5 @@
   
   <div id="saved_poses">
   </div>
-
-  
-  
-
 </body>
 </html>

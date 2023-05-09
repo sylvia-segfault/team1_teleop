@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+import rospy
+
+import math
+import tf2_ros
+import geometry_msgs.msg
+
+if __name__ == '__main__':
+    rospy.init_node('aruco_transforms')
+
+    tfBuffer = tf2_ros.Buffer()
+    listener = tf2_ros.TransformListener(tfBuffer)
+
+    rate = rospy.Rate(10.0)
+
+    # other_frame = "camera_color_optical_frame"
+    other_frame = "base_link"
+
+    while not rospy.is_shutdown():
+        try:
+            trans = tfBuffer.lookup_transform(other_frame, "walker_center", rospy.Time())
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            rate.sleep()
+            continue
+
+        
+        rospy.loginfo(f"{other_frame}: Translation x: {trans.transform.translation.x}, Rotation x: {trans.transform.rotation.x}")
+
+        # msg = geometry_msgs.msg.Twist()
+
+        # msg.angular.z = 4 * math.atan2(trans.transform.translation.y, trans.transform.translation.x)
+        # msg.linear.x = 0.5 * math.sqrt(trans.transform.translation.x ** 2 + trans.transform.translation.y ** 2)
+
+        # turtle_vel.publish(msg)
+
+        rate.sleep()
