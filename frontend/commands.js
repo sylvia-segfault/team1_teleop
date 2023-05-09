@@ -147,10 +147,14 @@ rotate_left = function () {
 }
 
 var mousedownID = -1;  //Global ID of mouse down interval
+var move_type = '';
+var move_amount = 0.0;
 function mousedown(type, data) {
   console.log("mouse down");
+  move_type = type;
+  move_amount = data;
   if(mousedownID==-1)  //Prevent multimple loops!
-     mousedownID = setInterval(whilemousedown(type, data), 100 /*execute every 100ms*/);
+     mousedownID = setInterval(whilemousedown, 100 /*execute every 100ms*/);
 
 
 }
@@ -158,19 +162,21 @@ function mouseup() {
   console.log("mouse up");
   if(mousedownID!=-1) {  //Only stop if exists
     clearInterval(mousedownID);
+    move_type = '';
+    move_amount = 0.0;
     mousedownID=-1;
   }
 
 }
-function whilemousedown(type, data) {
-   let msg = new ROSLIB.Message({data : data});
-   if (type === "translate") {
+function whilemousedown() {
+  let msg = new ROSLIB.Message({data : move_amount});
+  if (move_type === "translate") {
     console.log("translate base");
     translate_base_cmd.publish(msg);
-   } else if (type === "rotate") {
+  } else if (move_type === "rotate") {
     console.log("rotate base");
     rotate_base_cmd.publish(msg);
-   }
+  }
 
 }
 //Also clear the interval when user leaves the window with mouse
