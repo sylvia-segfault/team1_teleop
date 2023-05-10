@@ -96,7 +96,7 @@
     <button class="set_button" type="button" onclick="move_wrist()">Set Wrist</button>
     <br>
     
-    <input type="number" id="grip_input" name="grip_input" step="1" min="-7.8" max="5.2">
+    <input type="number" id="grip_input" name="grip_input" step="1" min="-7.8" max="4.2">
     <button class="set_button" type="button" onclick="move_grip()">Set Gripper</button>
     <br>
     <button class="set_all_button" type="button" onclick="move_all()">Set All</button>
@@ -106,17 +106,21 @@
   </form>  
   
   <div class="base_control">
-    <p>Use with EXTREME CAUTION, this is untested and might cause a runaway robot</p>
-    <p>press and hold</p>
+    <p>Press and Hold</p>
+
+    <lable for="velocity">Base Velocity</lable>
+    <input type="number" id="velocity" name="velocity" value="0.1"
+     step="0.1" min="0" max="0.5">
+
   
     <button class="forward_button"
-            onmousedown="mousedown('translate', 0.1)" onmouseup="mouseup()">forward</button><br>
+            onmousedown="mousedown('translate', 1)" onmouseup="mouseup()" onmouseleave="mouseup()">forward</button><br>
     <button class="lr_button"
-            onmousedown="mousedown('rotate', 0.1)" onmouseup="mouseup()">left</button> 
+            onmousedown="mousedown('rotate', 1)" onmouseup="mouseup()" onmouseleave="mouseup()">left</button> 
     <button class="backward_button" 
-            onmousedown="mousedown('translate', -0.1)" onmouseup="mouseup()">backward</button>
+            onmousedown="mousedown('translate', -1)" onmouseup="mouseup()" onmouseleave="mouseup()">backward</button>
     <button class="lr_button"
-            onmousedown="mousedown('rotate', -0.1)" onmouseup="mouseup()">right</button>
+            onmousedown="mousedown('rotate', -1)" onmouseup="mouseup()" onmouseleave="mouseup()">right</button>
   </div>
   
   <div id="saved_poses">

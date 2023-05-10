@@ -112,15 +112,21 @@ rotate_base_cmd = new ROSLIB.Topic({
   messageType : 'std_msgs/Float64'
 });
 
+stop_base_cmd = new ROSLIB.Topic({
+  ros : ros,
+  name : "/stop_base_cmd",
+  messageType : 'std_msgs/Float64'
+});
+
 var mousedownID = -1;  //Global ID of mouse down interval
 var move_type = '';
 var move_amount = 0.0;
 function mousedown(type, data) {
   console.log("mouse down");
   move_type = type;
-  move_amount = data;
+  move_amount = data * Number(document.getElementById("velocity").value);
   if(mousedownID==-1)  //Prevent multimple loops!
-     mousedownID = setInterval(whilemousedown, 500 /*execute every 100ms*/);
+     mousedownID = setInterval(whilemousedown, 100 /*execute every 100ms*/);
 
 
 }
@@ -128,6 +134,8 @@ function mouseup() {
   console.log("mouse up");
   if(mousedownID!=-1) {  //Only stop if exists
     clearInterval(mousedownID);
+    let msg = new ROSLIB.Message({data : 0});
+    stop_base_cmd.publish(msg);
     move_type = '';
     move_amount = 0.0;
     mousedownID=-1;

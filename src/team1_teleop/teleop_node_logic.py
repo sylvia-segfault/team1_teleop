@@ -35,8 +35,9 @@ class TeleopNode:
         self.sub_wrist = rospy.Subscriber('wrist_cmd', Float64, self.move_wrist_callback)
         self.sub_pose = rospy.Subscriber('pose_cmd', FrontEnd, self.move_pose_callback)
 
-        self.sub_translate_base = rospy.Subscriber('translate_base_cmd', Float64, self.translate_base_callback)
-        self.sub_rotate_base = rospy.Subscriber('rotate_base_cmd', Float64, self.rotate_base_callback)
+        self.sub_translate_base = rospy.Subscriber('translate_base_cmd', Float64, self.translate_base_callback, queue_size=1)
+        self.sub_rotate_base = rospy.Subscriber('rotate_base_cmd', Float64, self.rotate_base_callback, queue_size=1)
+        self.sub_stop_base = rospy.Subscriber('stop_base_cmd', Float64, self.stop_base_callback)
 
         self.set_motion_limits
         
@@ -112,6 +113,12 @@ class TeleopNode:
     
     def rotate_base_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Rotate command received %f", data.data)
+        self.base.set_rotational_velocity(v_r=data.data)
+        self.robot.push_command()
+
+    def stop_base_callback(self, data):
+        rospy.loginfo(rospy.get_caller_id() + "stop command received %f", data.data)
+        self.base.set_translate_velocity(v_m=data.data)
         self.base.set_rotational_velocity(v_r=data.data)
         self.robot.push_command()
 
