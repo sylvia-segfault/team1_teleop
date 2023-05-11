@@ -2,60 +2,128 @@
 <html>
 <head>
 <meta charset="utf-8" />
-
+<link rel="stylesheet" href="gui_style.css">
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/roslibjs/1.1.0/roslib.min.js"></script>
 
-<script type="text/javascript" type="text/javascript">
-  var ros = new ROSLIB.Ros({
-    url : 'ws://localhost:9090'
-  });
+<script src="ros_connection.js"></script>
+<script src="listeners.js"></script>
+<script src="commands.js"></script>
 
-  ros.on('connection', function() {
-    document.getElementById("status").innerHTML = "Connected";
-  });
+<script type="text/javascript">
+  var poses = {} // keep track of poses
+  var lift_pos = 0.0
+  var arm_pos = 0.0
+  var gripper_pos = 0.0
+  var wrist_pos = 0.0
+  var head_pan_pos = 0.0
+  var head_tilt_pos = 0.0
 
-  ros.on('error', function(error) {
-    document.getElementById("status").innerHTML = "Error";
-  });
+  save_seq_poses = function (pose_name) {
+    const pose = {
+      pose_type : document.getElementById("frame_select").value,
+      head_pan : head_pan_pos,
+      head_tilt : head_tilt_pos,
+      lift : lift_pos,
+      arm : arm_pos,
+      grip : gripper_pos,
+      wrist : wrist_pos
+    }
+    poses[pose_name] = pose;
 
-  ros.on('close', function() {
-    document.getElementById("status").innerHTML = "Closed";
-  });
-
-  var txt_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/arm_pos',
-    messageType : 'std_msgs/Float64'
-  });
-
-  txt_listener.subscribe(function(m) {
-    document.getElementById("msg").innerHTML = m.data;
-  });
-
-  cmd_vel_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : "/arm_move_commands",
-    messageType : 'std_msgs/Float64'
-  });
-
-  move = function (data) {
-    var move_arm = new ROSLIB.Message({data : data});
-    console.log("In move: " + data);
-    cmd_vel_listener.publish(move_arm);
+    const anchor = document.getElementById("saved_poses");
+    const button = document.createElement('button');
+    const name = document.getElementById("pose_name").value;
+    if (name === '') {
+      alert("please provide name");
+      return;
+    }
+    console.log(name)
+    document.getElementById("pose_name").value = "";
+    button.setAttribute('name', name);
+    button.setAttribute('text', name);
+    button.setAttribute('class', 'pose_button');
+    button.textContent = name;
+    button.onclick = function() {
+      move_to_pose(pose);
+    }
+    anchor.appendChild(button);
   }
 
-  // txt_listener.subscribe(function(m) {
-  //   document.getElementById("msg").innerHTML = m.data;
-  //   move(0.2);
-  // });
+
 </script>
 </head>
 
 <body>
-  <h1>Simple ROS User Interface</h1>
-  <p>Connection status: <span id="status"></span></p>
-  <p>Last /txt_msg received: <span id="msg"></span></p>
-  <button onclick="move(0.2)">MOVE OUT</button>
-  <button onclick="move(-0.2)">MOVE IN</button>
+  <h1>ROS User Interface</h1>
+  <p class="positions">Connection status: <span id="status"></span></p><br>
+  <p class="positions">Head Pan position: <span id="head_pan_msg"></span></p><br>
+  <p class="positions">Head Tilt position: <span id="head_tilt_msg"></span></p><br>
+  <p class="positions">Lift position: <span id="lift_msg"></span></p><br>
+  <p class="positions">Arm position: <span id="arm_msg"></span></p><br>
+  <p class="positions">Wrist position: <span id="wrist_msg"></span></p><br>
+  <p class="positions">Gripper position: <span id="grip_msg"></span></p><br>
+
+  
+  <form id="form" class="inputs">
+
+    <label for="frame_select">Choose a coordinate frame:</label>
+    <br>
+    <select name="frame_select" id="frame_select">
+      <option value="world_coord">Robot's Start Pose</option>
+      <option value="base_link">Robot's Base</option>
+      <option value="walker_center">Walker's Center</option>
+    </select>
+
+    <br>
+    
+    <input type="number" id="pan_input" name="pan_input" step="0.05">
+    <button class="set_button" type="button" onclick="move_pan()">Set Pan</button>
+    <br>
+    
+    <input type="number" id="tilt_input" name="tilt_input" step="0.05">
+    <button class="set_button" type="button" onclick="move_tilt()">Set Tilt</button>
+    <br>
+    
+    <input type="number" id="lift_input" name="lift_input" step="0.05" min="0.25" max="1">
+    <button class="set_button" type="button" onclick="move_lift()">Set Lift</button>
+    <br>
+    
+    <input type="number" id="arm_input" name="arm_input" step="0.05" min="0" max="0.5">
+    <button class="set_button" type="button" onclick="move_arm()">Set Arm</button>
+    <br>
+    
+    <input type="number" id="wrist_input" name="wrist_input" step="0.1">
+    <button class="set_button" type="button" onclick="move_wrist()">Set Wrist</button>
+    <br>
+    
+    <input type="number" id="grip_input" name="grip_input" step="1" min="-7.8" max="4.2">
+    <button class="set_button" type="button" onclick="move_grip()">Set Gripper</button>
+    <br>
+    <button class="set_all_button" type="button" onclick="move_all()">Set All</button>
+    <br>
+    <input type="text" id="pose_name" name="pose_name">
+    <button class="set_button" type="button" onclick="save_seq_poses()">Save Pose</button>
+  </form>  
+  
+  <div class="base_control">
+    <p>Press and Hold</p>
+
+    <lable for="velocity">Base Velocity</lable>
+    <input type="number" id="velocity" name="velocity" value="0.1"
+     step="0.1" min="0" max="0.5">
+
+  
+    <button class="forward_button"
+            onmousedown="mousedown('translate', 1)" onmouseup="mouseup()" onmouseleave="mouseup()">forward</button><br>
+    <button class="lr_button"
+            onmousedown="mousedown('rotate', 1)" onmouseup="mouseup()" onmouseleave="mouseup()">left</button> 
+    <button class="backward_button" 
+            onmousedown="mousedown('translate', -1)" onmouseup="mouseup()" onmouseleave="mouseup()">backward</button>
+    <button class="lr_button"
+            onmousedown="mousedown('rotate', -1)" onmouseup="mouseup()" onmouseleave="mouseup()">right</button>
+  </div>
+  
+  <div id="saved_poses">
+  </div>
 </body>
 </html>
