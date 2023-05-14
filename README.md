@@ -14,3 +14,7 @@ Terminal 2: \
 
 Terminal 3: \
 `python3 -m http.server`
+
+Design: \
+teleop_node subscribes to necessary info for finding and navigating to the walker.
+teleop_node acts as a client that requests from the `find_nav_walker` service.

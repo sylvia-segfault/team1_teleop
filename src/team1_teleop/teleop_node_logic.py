@@ -3,10 +3,13 @@ A teleop node that has a timer, a publisher and a subscriber. The publisher publ
 the robot's arm position, and the subscribers receives arm move commands.
 """
 import rospy
+import tf2_ros
 import stretch_body.robot
 import stretch_body.stretch_gripper
-from std_msgs.msg import Float64, Float64MultiArray
+from std_msgs.msg import Float64, Float64MultiArray, String
 from team1_teleop.msg import FrontEnd
+from geometry_msgs.msg import TransformStamped
+from geometry_msgs.msg import PoseStamped
 
 class TeleopNode:
 
@@ -42,6 +45,13 @@ class TeleopNode:
         self.set_motion_limits
         
         self.timer = rospy.Timer(rospy.Duration(0.5), self.timer_callback)
+        
+        self.walker_center = None
+        self.walker_side = None
+        self.pose_coordframe = rospy.Subscriber('pose_coordframe_cmd', String, self.coordframe_callback)
+        # the topic should be the one for nav algo to receive the pose
+        self.walker_nav_pub = rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=10)
+
         rospy.loginfo("Node initialized")
     
     def set_motion_limits(self):
@@ -137,9 +147,34 @@ class TeleopNode:
         self.pub_wrist.publish(wrist_pos)
         self.pub_head_pan.publish(head_pan)
         self.pub_head_tilt.publish(head_tilt)
-    
+
+    def coordframe_callback(self, msg):
+        """
+        This is saving the pose based on wherever the robot is relative to the walker center.
+        In the future, hardcode the relative position (the optimal position for where the robot base
+        should be in order to grab the walker)
+        """
+        # ignore walker side for now
+        if msg.data == 'walker center':
+            tfBuffer = tf2_ros.Buffer()
+            tf2_ros.TransformListener(tfBuffer)
+            # --------------------------------------------------
+            # IN PROGRESS
+            # AruCo Marker detection gives 3D positions and the corresponding TF in the marker's frame
+            # in terms of the walker's relative position from the robot's base.
+            # Need to translate that to a poseStamped (a ROS message that keeps track of x, y positions + orientation)
+            # in the global map frame
+            base_walker_center_tf = tfBuffer.lookup_transform('base_link', "walker_center", rospy.Time(0))
+            # --------------------------------------------------
+            # publish the poseStamped created above to the navigation stack
+            self.walker_nav_pub.publish()
+        # only test walker center atm
+        # elif msg.data == 'robot start pose':
+        # elif msg.data == 'robot base':
+        else:
+            raise ValueError('coordinate frame must be valid')
+
     def shutdown_hook(self):
         rospy.loginfo("Shutting down TeleopNode")
         self.robot.stop()
-
         
