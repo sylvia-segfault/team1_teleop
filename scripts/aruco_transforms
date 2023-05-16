@@ -1,36 +1,47 @@
 #!/usr/bin/env python3
 import rospy
 
-import math
 import tf2_ros
-import geometry_msgs.msg
+import tf2_geometry_msgs
+import tf_conversions
+from geometry_msgs.msg import PoseStamped
 
 if __name__ == '__main__':
     rospy.init_node('aruco_transforms')
 
     tfBuffer = tf2_ros.Buffer()
-    listener = tf2_ros.TransformListener(tfBuffer)
+    tf2_ros.TransformListener(tfBuffer)
+    pub = rospy.Publisher('walker_pos', PoseStamped, queue_size=10)
+
+    walker_pos_3d = PoseStamped()
+    walker_pos_3d.header.seq = 1
+    walker_pos_3d.header.frame_id = 'walker_center'
+    walker_pos_3d.pose.position.x = 0
+    walker_pos_3d.pose.position.y = 0
+    walker_pos_3d.pose.position.z = 0
+    walker_pos_3d.pose.orientation.x = 0
+    walker_pos_3d.pose.orientation.y = -0.7068252
+    walker_pos_3d.pose.orientation.z = 0
+    walker_pos_3d.pose.orientation.w = 0.7073883
 
     rate = rospy.Rate(10.0)
 
-    # other_frame = "camera_color_optical_frame"
-    other_frame = "base_link"
-
     while not rospy.is_shutdown():
+        walker_pos_3d.header.stamp = rospy.Time.now()
         try:
-            trans = tfBuffer.lookup_transform(other_frame, "walker_center", rospy.Time())
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            trans = tfBuffer.lookup_transform('map', 'walker_center', walker_pos_3d.header.stamp, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+            print(e)
             rate.sleep()
             continue
-
-        
-        rospy.loginfo(f"{other_frame}: Translation x: {trans.transform.translation.x}, Rotation x: {trans.transform.rotation.x}")
-
-        # msg = geometry_msgs.msg.Twist()
-
-        # msg.angular.z = 4 * math.atan2(trans.transform.translation.y, trans.transform.translation.x)
-        # msg.linear.x = 0.5 * math.sqrt(trans.transform.translation.x ** 2 + trans.transform.translation.y ** 2)
-
-        # turtle_vel.publish(msg)
-
+        walker_pos_2d = tf2_geometry_msgs.do_transform_pose(walker_pos_3d, trans)
+        walker_pos_2d.pose.position.z = 0
+        q = walker_pos_2d.pose.orientation
+        r, p, y = tf_conversions.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
+        new_quat = tf_conversions.transformations.quaternion_from_euler(0, 0, y)
+        walker_pos_2d.pose.orientation.x = new_quat[0]
+        walker_pos_2d.pose.orientation.y = new_quat[1]
+        walker_pos_2d.pose.orientation.z = new_quat[2]
+        walker_pos_2d.pose.orientation.w = new_quat[3]
+        pub.publish(walker_pos_2d)
         rate.sleep()

@@ -65,3 +65,14 @@
     gripper_pos = m.data;
   });
 
+  var pose_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/pose_',
+    messageType : 'std_msgs/Float64'
+  });
+
+  grip_listener.subscribe(function(m) {
+    document.getElementById("grip_msg").innerHTML = m.data.toFixed(4);
+    gripper_pos = m.data;
+  });
+
