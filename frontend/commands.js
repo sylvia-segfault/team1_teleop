@@ -92,12 +92,12 @@ move_all = function () {
 pos_cmd = new ROSLIB.Topic({
   ros: ros,
   name : "/pose_cmd",
-  messageType: 'team1_teleop/FrontEnd'
+  messageType: 'std_msgs/String'
 });
 
-move_to_pose = function (sgl_pose) {
-  let msg = new ROSLIB.Message(sgl_pose);
-  pos_cmd2.publish(msg);
+move_to_pose = function (name) {
+  let msg = new ROSLIB.Message({data: name});
+  pos_cmd.publish(msg);
 }
 
 translate_base_cmd = new ROSLIB.Topic({
@@ -156,4 +156,37 @@ function whilemousedown() {
 //Also clear the interval when user leaves the window with mouse
 //document.addEventListener("mouseout", mouseup);
 
-  
+save_pos_cmd = new ROSLIB.Topic({
+  ros: ros,
+  name : "/save_pose_cmd",
+  messageType: 'team1_teleop/SavePose'
+});
+
+save_pose = function () {
+  const frame = document.getElementById("frame_select").value;
+  const name = document.getElementById("pose_name").value;
+  if (name === '') {
+    alert("please provide name");
+    return;
+  }
+  document.getElementById("pose_name").value = "";
+  const msg = new ROSLIB.Message(
+    {
+      pose_name : name,
+      pose_frame_id: frame
+    }
+  );
+  save_pos_cmd.publish(msg);
+} 
+
+pose_in_cf_cmd = new ROSLIB.Topic({
+  ros: ros,
+  name : "/pose_in_cf_cmd",
+  messageType: 'std_msgs/String'
+});
+
+move_to_cf_pose = function (name) {
+  console.log("move to pose in cf called");
+  let msg = new ROSLIB.Message({data: name});
+  pose_in_cf_cmd.publish(msg);
+}

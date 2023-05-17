@@ -13,6 +13,9 @@
     <!-- CENTERED BASE LINK -->
     <node name="centered_base_link_tf_publisher" pkg="tf" type="static_transform_publisher" args="-0.1 0 0 0 0 0 1 /base_link /centered_base_link 100" />
 
+    <!-- WALKER FRAME-->
+    <node name="walker_center_transformer" pkg="team1_teleop" type="walker_center_transformer"/>
+
     <!-- LASER RANGE FINDER -->
     <include file="$(find stretch_core)/launch/rplidar.launch" />
 

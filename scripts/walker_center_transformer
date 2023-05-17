@@ -4,14 +4,14 @@ import rospy
 import tf2_ros
 import tf2_geometry_msgs
 import tf_conversions
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, TransformStamped
 
 if __name__ == '__main__':
-    rospy.init_node('aruco_transforms')
+    rospy.init_node('walker_center_transformer')
 
     tfBuffer = tf2_ros.Buffer()
     tf2_ros.TransformListener(tfBuffer)
-    pub = rospy.Publisher('walker_pos', PoseStamped, queue_size=10)
+    br = tf2_ros.TransformBroadcaster()
 
     walker_pos_3d = PoseStamped()
     walker_pos_3d.header.seq = 1
@@ -26,10 +26,12 @@ if __name__ == '__main__':
 
     rate = rospy.Rate(10.0)
 
+    other_frame = "base_link"
+
     while not rospy.is_shutdown():
         walker_pos_3d.header.stamp = rospy.Time.now()
         try:
-            trans = tfBuffer.lookup_transform('map', 'walker_center', walker_pos_3d.header.stamp, rospy.Duration(1))
+            trans = tfBuffer.lookup_transform(other_frame, 'walker_center', walker_pos_3d.header.stamp, rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
             print(e)
             rate.sleep()
@@ -43,5 +45,19 @@ if __name__ == '__main__':
         walker_pos_2d.pose.orientation.y = new_quat[1]
         walker_pos_2d.pose.orientation.z = new_quat[2]
         walker_pos_2d.pose.orientation.w = new_quat[3]
-        pub.publish(walker_pos_2d)
+        
+        t = TransformStamped()
+
+        t.header.stamp = rospy.Time.now()
+        t.header.frame_id = other_frame  # intended map  # maybe should be walker_center
+        t.child_frame_id = "xy_walker_center"
+        t.transform.translation.x = walker_pos_2d.pose.position.x
+        t.transform.translation.y = walker_pos_2d.pose.position.y
+        t.transform.translation.z = walker_pos_2d.pose.position.z
+        t.transform.rotation.x = walker_pos_2d.pose.orientation.x
+        t.transform.rotation.y = walker_pos_2d.pose.orientation.y
+        t.transform.rotation.z = walker_pos_2d.pose.orientation.z
+        t.transform.rotation.w = walker_pos_2d.pose.orientation.w
+
+        br.sendTransform(t)
         rate.sleep()

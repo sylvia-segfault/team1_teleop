@@ -76,3 +76,37 @@
     gripper_pos = m.data;
   });
 
+  var pose_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/saved_pos_list',
+    messageType : 'std_msgs/String'
+  });
+
+  pose_listener.subscribe(function(m) {
+    if (m.data === "") {
+      console.log("list from backend was empty");
+      return;
+    }
+    saved_pose = m.data.split(',');
+    const anchor = document.getElementById("saved_poses");
+    while (anchor.firstChild) {
+      anchor.removeChild(anchor.firstChild);
+    }
+    saved_pose.forEach(pose_name => {
+      const button = document.createElement('button');
+      
+      // document.getElementById("pose_name").value = "";
+      button.setAttribute('name', pose_name);
+      button.setAttribute('text', pose_name);
+      button.setAttribute('class', 'pose_button');
+      button.textContent = pose_name;
+      button.onclick = function () {
+        move_to_cf_pose(pose_name);
+      }
+      anchor.appendChild(button);
+    });
+
+    }
+     
+  );
+

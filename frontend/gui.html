@@ -11,46 +11,12 @@
   <script src="commands.js"></script>
 
   <script type="text/javascript">
-    var poses = {} // keep track of poses
     var lift_pos = 0.0
     var arm_pos = 0.0
     var gripper_pos = 0.0
     var wrist_pos = 0.0
     var head_pan_pos = 0.0
     var head_tilt_pos = 0.0
-
-    save_seq_poses = function (pose_name) {
-      // const pose = {
-      //   pose_type: document.getElementById("frame_select").value,
-      //   head_pan: head_pan_pos,
-      //   head_tilt: head_tilt_pos,
-      //   lift: lift_pos,
-      //   arm: arm_pos,
-      //   grip: gripper_pos,
-      //   wrist: wrist_pos
-      // }
-      // poses[pose_name] = pose;
-
-      // const anchor = document.getElementById("saved_poses");
-      // const button = document.createElement('button');
-      // const name = document.getElementById("pose_name").value;
-      // if (name === '') {
-      //   alert("please provide name");
-      //   return;
-      // }
-      // console.log(name)
-      // document.getElementById("pose_name").value = "";
-      // button.setAttribute('name', name);
-      // button.setAttribute('text', name);
-      // button.setAttribute('class', 'pose_button');
-      // button.textContent = name;
-      // button.onclick = function () {
-      //   move_to_pose(pose);
-      // }
-      // anchor.appendChild(button);
-    }
-
-
   </script>
 </head>
 
@@ -72,7 +38,7 @@
     <select name="frame_select" id="frame_select">
       <option value="map">Robot's Start Pose</option>
       <option value="base_link">Robot's Base</option>
-      <option value="walker_center">Walker's Center</option>
+      <option value="xy_walker_center">Walker's Center</option>
     </select>
 
     <br>
@@ -103,7 +69,7 @@
     <button class="set_all_button" type="button" onclick="move_all()">Set All</button>
     <br>
     <input type="text" id="pose_name" name="pose_name">
-    <button class="set_button" type="button" onclick="save_seq_poses()">Save Pose</button>
+    <button class="set_button" type="button" onclick="save_pose()">Save Pose</button>
   </form>
 
   <div class="base_control">
