@@ -5,22 +5,29 @@ the robot's arm position, and the subscribers receives arm move commands.
 import rospy
 import tf2_ros
 import tf2_geometry_msgs
-import tf_conversions
 import stretch_body.robot
 import stretch_body.stretch_gripper
 from std_msgs.msg import Float64, String
 from nav_msgs.msg import Odometry
 from team1_teleop.msg import FrontEnd, SavePose
-from geometry_msgs.msg import TransformStamped
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, PointStamped
+from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
 import os
 import pickle
 
-class TeleopNode:
+import hello_helpers.hello_misc as hm
+import stretch_funmap.navigate as nv
+import stretch_funmap.manipulation_planning as mp
+
+class TeleopNode(hm.HelloNode):
 
     def __init__(self):
-        self.robot = stretch_body.robot.Robot()
-        self.gripper = stretch_body.stretch_gripper.StretchGripper()
+        hm.HelloNode.__init__(self)
+        
+    def main(self, node_name, node_topic_namespace, wait_for_first_pointcloud=False):
+        super().main(node_name, node_topic_namespace, wait_for_first_pointcloud)
+        # self.robot = stretch_body.robot.Robot()
+        # self.gripper = stretch_body.stretch_gripper.StretchGripper()
         self.robot.startup()
         self.head = self.robot.head
         self.lift = self.robot.lift
@@ -46,13 +53,17 @@ class TeleopNode:
         # walker 2d pose
         self.walker_center = None
         self.curr_pos = None
-        self.tfBuffer = tf2_ros.Buffer()
-        tf2_ros.TransformListener(self.tfBuffer)
+        self.tf2_buffer = tf2_ros.Buffer()
+        # tf2_ros.TransformListener(self.tf2_buffer)
         self.odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
         # keep track of user's input (when they want to navigate the walker)
         self.pose_in_coordframe = rospy.Subscriber('pose_in_cf_cmd', String, self.pose_in_coordframe_callback)
         # the topic should be the one for nav algo to receive the pose
         self.walker_nav_pub = rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=10)
+
+        """ Receives input from the user to grab the walker """
+        self.walker_grab_sub = rospy.Subscriber('walker_grab_cmd', String, self.walker_grab_callback)
+        self.gripper_nav_pub = rospy.Publisher('/clicked_point', PointStamped, queue_size=10)
 
         
         """ HARD CODE WALKER POSITON IN RELATION TO ARUCO TAG """
@@ -60,6 +71,7 @@ class TeleopNode:
         self.walker_pos_3d = PoseStamped()
         self.walker_pos_3d.header.seq = 1
         self.walker_pos_3d.header.frame_id = 'walker_center'
+        self.walker_pos_3d.header.stamp = rospy.Time.now()
         self.walker_pos_3d.pose.position.x = 0
         self.walker_pos_3d.pose.position.y = 0
         self.walker_pos_3d.pose.position.z = 0
@@ -113,8 +125,8 @@ class TeleopNode:
             # self.walker_center is the walker pose in the 2d frame of the map
             # Note that source frame in lookup_transform 'walker_center' should 
             # instead be whatever frame self.walker_center is saved in ("map")
-            walker_trans = self.tfBuffer.lookup_transform(msg.pose_frame_id, 'walker_center', self.walker_pos_3d.header.stamp, rospy.Duration(1))
-            odom_trans = self.tfBuffer.lookup_transform(msg.pose_frame_id, 'odom', self.walker_pos_3d.header.stamp, rospy.Duration(1))
+            walker_trans = self.tf2_buffer.lookup_transform(msg.pose_frame_id, 'walker_center', self.walker_pos_3d.header.stamp, rospy.Duration(1))
+            odom_trans = self.tf2_buffer.lookup_transform(msg.pose_frame_id, 'odom', self.walker_pos_3d.header.stamp, rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             rospy.logwarn("Cannot transform saved pose")
             return
@@ -143,7 +155,7 @@ class TeleopNode:
     
     def odom_callback(self, msg: Odometry):
         # try:
-        #     trans = self.tfBuffer.lookup_transform('map', "odom", rospy.Time.now(), rospy.Duration(1))
+        #     trans = self.tf2_buffer.lookup_transform('map', "odom", rospy.Time.now(), rospy.Duration(1))
         # except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
         #     rospy.logwarn("Could not transform odom into map frame.")
         #     self.walker_center = None
@@ -163,7 +175,7 @@ class TeleopNode:
     def aruco_callback(self, timer):
         self.walker_pos_3d.header.stamp = rospy.Time.now()
         # try:
-        #     trans = self.tfBuffer.lookup_transform('map', 'walker_center', rospy.Time.now(), rospy.Duration(1))
+        #     trans = self.tf2_buffer.lookup_transform('map', 'walker_center', rospy.Time.now(), rospy.Duration(1))
         # except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
         #     rospy.logwarn("Walker center not found.")
         #     self.walker_center = None
@@ -182,14 +194,30 @@ class TeleopNode:
     def pose_in_coordframe_callback(self, msg):
         frame_id, robot_pose, _ = self.saved_poses[msg.data]
         try:
-            trans = self.tfBuffer.lookup_transform("map", frame_id, self.walker_pos_3d.header.stamp, rospy.Duration(1))
+            trans = self.tf2_buffer.lookup_transform("map", frame_id, self.walker_pos_3d.header.stamp, rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            rospy.logwarn("Cannot get tf in map frame from the given coordinate frame")
+            rospy.logerr("Cannot get tf in map frame from the given coordinate frame")
             return
         rospy.loginfo("Sending goal message to stretch_navigation stack")
         robot_pose_out = tf2_geometry_msgs.do_transform_pose(robot_pose, trans)
         self.walker_nav_pub.publish(robot_pose_out)
 
+    def walker_grab_callback(self, msg):
+        # scan the environment around the walker and create a map
+
+        # locate the walker on FUNMAP
+        # the FUNMAP might need to be ran separately from the nav stack, so that the map frame
+        # corresponds with FUNMAP
+        try:
+            trans = self.tf2_buffer.lookup_transform("map", self.walker_pos_3d.header.frame_id, self.walker_pos_3d.header.stamp, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            rospy.logerr("Cannot get tf of the walker in FUNMAP")
+            return
+        rospy.loginfo("Sending point message to FUNMAP")
+        gripper_point_out = tf2_geometry_msgs.do_transform_point()
+
+        # publish target click point in FUNMAP (with a radius of walker position)
+        pass
 
     """
     ***********************************
@@ -203,8 +231,13 @@ class TeleopNode:
         self.robot.push_command()
         self.head.get_joint('head_pan').wait_until_at_setpoint()
 
+        # pose = {"joint_head_pan": data.data}
+        # self.move_to_pose(pose)
+
     def move_head_tilt_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Head tilt move command received %f", data.data)
+        # pose = {"joint_head_tilt": data.data}
+        # self.move_to_pose(pose)
         self.head.move_to('head_tilt', data.data)
         self.robot.push_command()
         self.head.get_joint('head_tilt').wait_until_at_setpoint()    
@@ -222,10 +255,13 @@ class TeleopNode:
         self.robot.arm.wait_until_at_setpoint()
 
     def move_wrist_callback(self, data):
+        rospy.logwarn("HERE")
         rospy.loginfo(rospy.get_caller_id() + "Wrist move command received %f", data.data)
-        self.end_of_arm.move_to('wrist_yaw', data.data)
-        self.robot.push_command()
-        self.end_of_arm.get_joint('wrist_yaw').wait_until_at_setpoint()
+        # self.end_of_arm.move_to('wrist_yaw', data.data)
+        # self.robot.push_command()
+        # self.end_of_arm.get_joint('wrist_yaw').wait_until_at_setpoint()
+        pose = {"wrist_extension": data.data}
+        self.move_to_pose(pose)
     
     def move_grip_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "Gripper move command received %f", data.data)
