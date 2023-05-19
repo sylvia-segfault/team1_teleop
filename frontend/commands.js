@@ -166,7 +166,7 @@ save_pose = function () {
   const frame = document.getElementById("frame_select").value;
   const name = document.getElementById("pose_name").value;
   if (name === '') {
-    alert("please provide name");
+    alert("I think you forgot something");
     return;
   }
   document.getElementById("pose_name").value = "";

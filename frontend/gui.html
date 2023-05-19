@@ -10,15 +10,6 @@
   <script src="listeners.js"></script>
   <script src="commands.js"></script>
   <script src="services.js"></script>
-
-  <script type="text/javascript">
-    var lift_pos = 0.0
-    var arm_pos = 0.0
-    var gripper_pos = 0.0
-    var wrist_pos = 0.0
-    var head_pan_pos = 0.0
-    var head_tilt_pos = 0.0
-  </script>
 </head>
 
 <body>
@@ -41,7 +32,6 @@
       <option value="base_link">Robot's Base</option>
       <option value="xy_walker_center">Walker's Center</option>
     </select>
-
     <br>
 
     <input type="number" id="pan_input" name="pan_input" step="0.05">
@@ -96,7 +86,7 @@
 
   <div>
     <p>Fun Map Stuff?</p>
-    <button class="set_button" type="button" onclick="perf_scan()" >Scan Env</button>
+    <button class="set_button" type="button" onclick="perf_scan()">Scan Env</button>
   </div>
 </body>
 
