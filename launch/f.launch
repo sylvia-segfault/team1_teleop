@@ -43,11 +43,15 @@
   <!-- -->
 
   <!-- KEYBOARD TELEOP -->
-  <node name="keyboard_teleop" pkg="stretch_core" type="keyboard_teleop" output="screen" args='--mapping_on' />
   <!-- -->
 
   <!-- VISUALIZE -->
   <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find stretch_funmap)/rviz/stretch_mapping.rviz" if="$(arg rviz)" />
   <!-- -->
+
+  <!-- Web ui -->
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+  <!-- -->
+  
     
 </launch>

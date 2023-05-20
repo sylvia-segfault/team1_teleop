@@ -16,6 +16,8 @@ import os
 import pickle
 
 import hello_helpers.hello_misc as hm
+from hello_helpers.gripper_conversion import GripperConversion
+
 import stretch_funmap.navigate as nv
 import stretch_funmap.manipulation_planning as mp
 
@@ -23,6 +25,7 @@ class TeleopNode(hm.HelloNode):
 
     def __init__(self):
         hm.HelloNode.__init__(self)
+        self.gc = GripperConversion()
         
     def main(self, node_name, node_topic_namespace, wait_for_first_pointcloud=False):
         super().main(node_name, node_topic_namespace, wait_for_first_pointcloud)
@@ -70,6 +73,22 @@ class TeleopNode(hm.HelloNode):
         self.walker_pos_3d.pose.orientation.z = 0
         self.walker_pos_3d.pose.orientation.w = 0.7073883
 
+        """ HARD CODE GRIPPER POSITION IN RELATION TO ARUCO TAG """
+
+        self.gripper_pos_3d = PoseStamped()
+        self.gripper_pos_3d.header.seq = 1
+        self.gripper_pos_3d.header.frame_id = 'link_grasp_center'
+        self.gripper_pos_3d.header.stamp = rospy.Time.now()
+        # self.gripper_pos_3d.pose.position.x = 0
+        # self.gripper_pos_3d.pose.position.y = 0
+        # self.gripper_pos_3d.pose.position.z = 0
+        # self.gripper_pos_3d.pose.orientation.x = 0
+        # self.gripper_pos_3d.pose.orientation.y = -0.7068252
+        # self.gripper_pos_3d.pose.orientation.z = 0
+        # self.gripper_pos_3d.pose.orientation.w = 0.7073883
+
+        self.test_pub = rospy.Publisher("/test_pose", PoseStamped, queue_size=10)
+
         """ 
         ***********************************************
         *** Simple joint subscribers and publishers ***
@@ -82,9 +101,9 @@ class TeleopNode(hm.HelloNode):
         self.sub_arm = rospy.Subscriber('arm_cmd', Float64, self.move_arm_callback)
         self.sub_grip = rospy.Subscriber('grip_cmd', Float64, self.move_grip_callback)
         self.sub_wrist = rospy.Subscriber('wrist_cmd', Float64, self.move_wrist_callback)
-        self.sub_pose = rospy.Subscriber('pose_cmd', FrontEnd, self.move_pose_callback)
+        # self.sub_pose = rospy.Subscriber('pose_cmd', FrontEnd, self.move_pose_callback)
 
-        # self.sub_translate_base = rospy.Subscriber('translate_base_cmd', Float64, self.translate_base_callback, queue_size=1)
+        self.sub_translate_base = rospy.Subscriber('translate_base_cmd', Float64, self.translate_base_callback, queue_size=1)
         # self.sub_rotate_base = rospy.Subscriber('rotate_base_cmd', Float64, self.rotate_base_callback, queue_size=1)
         # self.sub_stop_base = rospy.Subscriber('stop_base_cmd', Float64, self.stop_base_callback)
 
@@ -129,6 +148,8 @@ class TeleopNode(hm.HelloNode):
         # self.pub_head_tilt.publish(head_tilt)
 
         self.pub_saved_poses.publish(','.join(self.saved_poses.keys()))
+        self.gripper_pos_3d.header.stamp = rospy.Time.now()
+        self.test_pub.publish(self.gripper_pos_3d)
         # rospy.loginfo("sent poses: " + ','.join(self.saved_poses.keys()))
     
     def odom_callback(self, msg: Odometry):
@@ -233,14 +254,13 @@ class TeleopNode(hm.HelloNode):
         rospy.loginfo(rospy.get_caller_id() + "Gripper move command received %f", data.data)
         " investigate gripper_conversion.py "
         " ['joint_gripper_finger_left', 'joint_gripper_finger_right', 'gripper_aperture'] "
-        pct_unit = self.gripper.world_rad_to_pct(data.data)
-        pose = {"joint_stretch_gripper": pct_unit}
+        apt = self.gc.finger_rad_to_aperture(data.data)
+        pose = {"gripper_aperture": apt}
         self.move_to_pose(pose)
 
-    # def translate_base_callback(self, data):
-    #     rospy.loginfo(rospy.get_caller_id() + "Base command received %f", data.data)
-    #     self.base.set_translate_velocity(v_m=data.data)
-    #     self.robot.push_command()    
+    def translate_base_callback(self, data):
+        rospy.loginfo(rospy.get_caller_id() + "Base command received %f", data.data)
+          
     
     # def rotate_base_callback(self, data):
     #     rospy.loginfo(rospy.get_caller_id() + "Rotate command received %f", data.data)
@@ -253,19 +273,19 @@ class TeleopNode(hm.HelloNode):
     #     self.base.set_rotational_velocity(v_r=data.data)
     #     self.robot.push_command()
 
-    def move_pose_callback(self, msg):
-        """ Given a Front End msg move every joint of the robot """
-        rospy.loginfo(msg)
+    # def move_pose_callback(self, msg):
+    #     """ Given a Front End msg move every joint of the robot """
+    #     rospy.loginfo(msg)
 
-        pose = {
-            "joint_head_pan"        : msg.head_pan,
-            "joint_head_tilt"       : msg.head_tilt,
-            "joint_lift"            : msg.lift,
-            "joint_arm"             : msg.arm,
-            "joint_wrist_yaw"       : msg.wrist,
-            "joint_stretch_gripper" : self.gripper.world_rad_to_pct(msg.grip)
-            }
-        self.move_to_pose(pose)
+    #     pose = {
+    #         "joint_head_pan"        : msg.head_pan,
+    #         "joint_head_tilt"       : msg.head_tilt,
+    #         "joint_lift"            : msg.lift,
+    #         "joint_arm"             : msg.arm,
+    #         "joint_wrist_yaw"       : msg.wrist,
+    #         "joint_stretch_gripper" : self.gripper.world_rad_to_pct(msg.grip)
+    #         }
+    #     self.move_to_pose(pose)
 
     def shutdown_hook(self):
         rospy.loginfo("Shutting down TeleopNode")

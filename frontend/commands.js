@@ -102,8 +102,8 @@ move_to_pose = function (name) {
 
 translate_base_cmd = new ROSLIB.Topic({
   ros : ros,
-  name : "/translate_base_cmd",
-  messageType : 'std_msgs/Float64'
+  name : "/cmd_vel",
+  messageType : 'geometry_msgs/Twist'
 });
 
 rotate_base_cmd = new ROSLIB.Topic({
@@ -134,8 +134,11 @@ function mouseup() {
   console.log("mouse up");
   if(mousedownID!=-1) {  //Only stop if exists
     clearInterval(mousedownID);
-    let msg = new ROSLIB.Message({data : 0});
-    stop_base_cmd.publish(msg);
+    let msg = new ROSLIB.Message({
+      linear : 0,
+      angular : 0
+    });
+    translate_base_cmd.publish(msg);
     move_type = '';
     move_amount = 0.0;
     mousedownID=-1;
@@ -143,7 +146,10 @@ function mouseup() {
 
 }
 function whilemousedown() {
-  let msg = new ROSLIB.Message({data : move_amount});
+  let msg = new ROSLIB.Message({
+    linear : {x : 0.1, y: 0.0, z : 0.0},
+    angular : {x : 0.1, y: 0.1, z : 0.1}
+  });
   if (move_type === "translate") {
     console.log("translate base");
     translate_base_cmd.publish(msg);
