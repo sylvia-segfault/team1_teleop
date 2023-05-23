@@ -1,2 +1,3 @@
 string pose_name
 string pose_frame_id
+int32 pose_type

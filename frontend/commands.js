@@ -168,18 +168,20 @@ save_pos_cmd = new ROSLIB.Topic({
   messageType: 'team1_teleop/SavePose'
 });
 
-save_pose = function () {
-  const frame = document.getElementById("frame_select").value;
-  const name = document.getElementById("pose_name").value;
+save_pose = function (frame, name, type) {
   if (name === '') {
-    alert("I think you forgot something");
+    alert("Missing pose name for new pose");
     return;
   }
-  document.getElementById("pose_name").value = "";
+  if (name.includes(",")) {
+    alert("Do not include commas in pose names");
+    return;
+  }
   const msg = new ROSLIB.Message(
     {
       pose_name : name,
-      pose_frame_id: frame
+      pose_frame_id: frame,
+      pose_type: type
     }
   );
   save_pos_cmd.publish(msg);
@@ -193,6 +195,6 @@ pose_in_cf_cmd = new ROSLIB.Topic({
 
 move_to_cf_pose = function (name) {
   console.log("move to pose in cf called");
-  let msg = new ROSLIB.Message({data: name});
+  const msg = new ROSLIB.Message({data: name});
   pose_in_cf_cmd.publish(msg);
 }

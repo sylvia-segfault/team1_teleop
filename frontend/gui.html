@@ -24,16 +24,6 @@
 
 
   <form id="form" class="inputs">
-
-    <label for="frame_select">Choose a coordinate frame:</label>
-    <br>
-    <select name="frame_select" id="frame_select">
-      <option value="map">Robot's Start Pose</option>
-      <option value="base_link">Robot's Base</option>
-      <option value="xy_walker_center">Walker's Center</option>
-    </select>
-    <br>
-
     <input type="number" id="pan_input" name="pan_input" step="0.05">
     <button class="set_button" type="button" onclick="move_pan()">Set Pan</button>
     <br>
@@ -58,9 +48,6 @@
     <button class="set_button" type="button" onclick="move_grip()">Set Gripper</button>
     <br>
     <button class="set_all_button" type="button" onclick="move_all()">Set All</button>
-    <br>
-    <input type="text" id="pose_name" name="pose_name">
-    <button class="set_button" type="button" onclick="save_pose()">Save Pose</button>
   </form>
 
   <div class="base_control">
@@ -80,13 +67,49 @@
       onmouseleave="mouseup()">right</button>
   </div>
 
-
-  <div id="saved_poses">
+  <div>
+    <h3>Scan Environment</h3>
+    <button class="set_button" type="button" onclick="perf_scan()">Scan Env</button>
   </div>
 
   <div>
-    <p>Fun Map Stuff?</p>
-    <button class="set_button" type="button" onclick="perf_scan()">Scan Env</button>
+    <h3>Save Base Pose</h3>
+    <label for="frame_select_base">Choose a coordinate frame:</label>
+    <br>
+    <select name="frame_select_base" id="frame_select_base">
+      <option value="xy_walker_center">Walker's Center</option>
+      <option value="base_link">Robot's Base</option>
+      <option value="map">Robot's Start Pose</option>
+    </select>
+    <br>
+    <input type="text" id="pose_name_base" name="pose_name_base">
+    <button class="set_button" type="button" onclick="save_pose(
+      document.getElementById('frame_select_base').value,
+      document.getElementById('pose_name_base').value,
+      0
+    ); document.getElementById('pose_name_base').value = ''">Save Base Pose</button>
+    <br>
+    <div id="saved_poses_base"></div>
+  </div>
+
+  <div>
+    <h3>Save Gripper Pose</h3>
+    <label for="frame_select_gripper">Choose a coordinate frame:</label>
+    <br>
+    <select name="frame_select_gripper" id="frame_select_gripper">
+      <option value="xy_walker_center">Walker's Center</option>
+      <option value="base_link">Robot's Base</option>
+      <option value="map">Robot's Start Pose</option>
+    </select>
+    <br>
+    <input type="text" id="pose_name_gripper" name="pose_name_gripper">
+    <button class="set_button" type="button" onclick="save_pose(
+      document.getElementById('frame_select_gripper').value,
+      document.getElementById('pose_name_gripper').value,
+      1
+    ); document.getElementById('pose_name_gripper').value = ''">Save Gripper Pose</button>
+    <br>
+    <div id="saved_poses_gripper"></div>
   </div>
 </body>
 

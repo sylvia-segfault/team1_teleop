@@ -49,7 +49,7 @@ if __name__ == '__main__':
         t = TransformStamped()
 
         t.header.stamp = rospy.Time.now()
-        t.header.frame_id = other_frame  # intended map  # maybe should be walker_center
+        t.header.frame_id = other_frame  # intended map, maybe should be walker_center
         t.child_frame_id = "xy_walker_center"
         t.transform.translation.x = walker_pos_2d.pose.position.x
         t.transform.translation.y = walker_pos_2d.pose.position.y

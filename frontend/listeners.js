@@ -40,20 +40,25 @@ joint_state_listener.subscribe(function(msg) {
 var pose_listener = new ROSLIB.Topic({
   ros : ros,
   name : '/saved_pos_list',
-  messageType : 'std_msgs/String'
+  messageType : 'team1_teleop/SavedPoses'
 });
 
 pose_listener.subscribe(function(m) {
   if (m.data === "") {
-    console.log("list from backend was empty");
     return;
   }
-  saved_pose = m.data.split(',');
-  const anchor = document.getElementById("saved_poses");
-  while (anchor.firstChild) {
-    anchor.removeChild(anchor.firstChild);
+  saved_poses = m.pose_names
+  saved_types = m.pose_types
+  console.assert(saved_poses.length === saved_types.length);
+  const anchor_base = document.getElementById("saved_poses_base");
+  const anchor_gripper = document.getElementById("saved_poses_gripper");
+  while (anchor_base.firstChild) {
+    anchor_base.removeChild(anchor_base.firstChild);
   }
-  saved_pose.forEach(pose_name => {
+  while (anchor_gripper.firstChild) {
+    anchor_gripper.removeChild(anchor_gripper.firstChild);
+  }
+  saved_poses.forEach((pose_name, index) => {
     const button = document.createElement('button');
     button.setAttribute('name', pose_name);
     button.setAttribute('text', pose_name);
@@ -62,7 +67,15 @@ pose_listener.subscribe(function(m) {
     button.onclick = function () {
       move_to_cf_pose(pose_name);
     }
-    anchor.appendChild(button);
+    switch (saved_types[index]) {
+      case 0:
+        anchor_base.appendChild(button);
+        break;
+      case 1:
+        anchor_gripper.appendChild(button);
+        break;
+      default:
+        console.error("Invalid pose type detected for pose " + pose_name);
+    }
   });
 });
-
