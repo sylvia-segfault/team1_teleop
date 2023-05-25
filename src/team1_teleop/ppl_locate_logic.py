@@ -9,6 +9,7 @@ import actionlib
 from control_msgs.msg import FollowJointTrajectoryAction
 from control_msgs.msg import FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
+from std_msgs.msg import Float64
 
 from visualization_msgs.msg import MarkerArray, Marker
 
@@ -43,7 +44,6 @@ class PplLocateNode(hm.HelloNode):
         self.move_base = nv.MoveBase(self)
         self.letter_height_m = 0.2
         self.wrist_position = None
-        self.lift_position = None
         self.manipulation_view = None
         
         marker = Marker()
@@ -52,13 +52,15 @@ class PplLocateNode(hm.HelloNode):
 
         num_pan_angles = 5
 
+        self.sub_walker_ret = rospy.Subscriber('return_walker_cmd', Float64, self.return_walker_callback)
+
         # looking out along the arm
         middle_pan_angle = -math.pi/2.0
 
         look_around_range = math.pi/3.0
         min_pan_angle = middle_pan_angle - (look_around_range / 2.0)
-        max_pan_angle = middle_pan_angle + (look_around_range / 2.0)
-        pan_angle = min_pan_angle
+        # max_pan_angle = middle_pan_angle + (look_around_range / 2.0)
+        # pan_angle = min_pan_angle
         pan_increment = look_around_range / float(num_pan_angles - 1.0)
         self.pan_angles = [min_pan_angle + (i * pan_increment)
                            for i in range(num_pan_angles)]
@@ -69,25 +71,25 @@ class PplLocateNode(hm.HelloNode):
 
         with self.move_lock: 
             self.handover_goal_ready = False
-        
+
     def joint_states_callback(self, joint_states):
         with self.joint_states_lock: 
             self.joint_states = joint_states
-        wrist_position, wrist_velocity, wrist_effort = hm.get_wrist_state(joint_states)
+        wrist_position, _, _ = hm.get_wrist_state(joint_states)
         self.wrist_position = wrist_position
-        lift_position, lift_velocity, lift_effort = hm.get_lift_state(joint_states)
-        self.lift_position = lift_position
 
     def look_around_callback(self):
+        print("looking around")
         # Cycle the head back and forth looking for a person to whom
         # to handout the object.
-        with self.move_lock:
+        with self.move_lock:  
             pan_index = (self.prev_pan_index + 1) % len(self.pan_angles)
             pan_angle = self.pan_angles[pan_index]
+            print(pan_angle)
             pose = {'joint_head_pan': pan_angle}
             self.move_to_pose(pose)
             self.prev_pan_index = pan_index
-    
+        
     def mouth_position_callback(self, marker_array):
         with self.move_lock: 
 
@@ -105,7 +107,7 @@ class PplLocateNode(hm.HelloNode):
                     lookup_time = rospy.Time(0) # return most recent transform
                     timeout_ros = rospy.Duration(0.1)
 
-                    old_frame_id = self.mouth_point.header.frame_id[:]
+                    old_frame_id = self.mouth_point.header.frame_id[1:]
                     new_frame_id = 'base_link'
                     stamped_transform = self.tf2_buffer.lookup_transform(new_frame_id, old_frame_id, lookup_time, timeout_ros)
                     points_in_old_frame_to_new_frame_mat = rn.numpify(stamped_transform.transform)
@@ -123,6 +125,7 @@ class PplLocateNode(hm.HelloNode):
 
                     handoff_object = True
 
+                    # TODO： change the target offset position
                     if handoff_object:
                         # attempt to handoff the object at a location below
                         # the mouth with respect to the world frame (i.e.,
@@ -138,12 +141,7 @@ class PplLocateNode(hm.HelloNode):
 
                     delta_forward_m = fingers_error[0] 
                     delta_extension_m = -fingers_error[1]
-                    delta_lift_m = fingers_error[2]
-
-                    max_lift_m = 1.0
-                    lift_goal_m = self.lift_position + delta_lift_m
-                    lift_goal_m = min(max_lift_m, lift_goal_m)
-                    self.lift_goal_m = lift_goal_m
+                    # delta_lift_m = fingers_error[2]
 
                     self.mobile_base_forward_m = delta_forward_m
 
@@ -163,52 +161,50 @@ class PplLocateNode(hm.HelloNode):
 
             
     def trigger_handover_object_callback(self, request):
-        with self.move_lock:
+        print("trigger handover object callback")
+        with self.move_lock: 
             # First, retract the wrist in preparation for handing out an object.
             pose = {'wrist_extension': 0.005}
             self.move_to_pose(pose)
 
-            if self.handover_goal_ready:
-                pose = {'joint_lift': self.lift_goal_m}
-                self.move_to_pose(pose)
+            if self.handover_goal_ready: 
                 tolerance_distance_m = 0.01
                 at_goal = self.move_base.forward(self.mobile_base_forward_m, detect_obstacles=False, tolerance_distance_m=tolerance_distance_m)
                 pose = {'wrist_extension': self.wrist_goal_m}
                 self.move_to_pose(pose)
                 self.handover_goal_ready = False
 
-                return TriggerResponse(
-                    success=True,
-                    message='Completed object handover!'
-                )
-            else:
-                return TriggerResponse(
-                    success=False,
-                    message='Failed to find handover goal'
+            return TriggerResponse(
+                success=True,
+                message='Completed object handover!'
                 )
 
     
     def main(self):
-        hm.HelloNode.main(self, 'ppl_locate', 'handover_object', wait_for_first_pointcloud=False)
+        hm.HelloNode.main(self, 'find_mouth', 'find_mouth', wait_for_first_pointcloud=False)
 
         self.joint_states_subscriber = rospy.Subscriber('/stretch/joint_states', JointState, self.joint_states_callback)
         
+        #TODO: not receving anything back
+        self.mouth_position_subscriber = rospy.Subscriber('/nearest_mouth/marker_array', MarkerArray, self.mouth_position_callback)
+
         self.trigger_deliver_object_service = rospy.Service('/deliver_object/trigger_deliver_object',
                                                             Trigger,
                                                             self.trigger_handover_object_callback)
-        
-        self.mouth_position_subscriber = rospy.Subscriber('/nearest_mouth/marker_array', MarkerArray, self.mouth_position_callback)
+    
+    def return_walker_callback(self, data):
+        print("received command to return walker")
+    
+        # self.trigger_handover_object_callback(None)
         
         # This rate determines how quickly the head pans back and forth.
         rate = rospy.Rate(0.5)
-        look_around = False
+        look_around = True
         while not rospy.is_shutdown():
             if look_around: 
                 self.look_around_callback()
             rate.sleep()
-            
+        
     def shutdown_hook(self):
-        rospy.loginfo("Shutting down TeleopNode")
-        if len(self.saved_poses):
-            with open(self.saved_poses_file, "wb") as file:
-                pickle.dump(self.saved_poses, file)
+        rospy.loginfo("Shutting down Ppl Locate node")
+
