@@ -8,6 +8,10 @@
     <param name="initial_mode" type="string" value="High Accuracy"/>
   </node>
   <!-- -->
+
+  <!-- KEYBOARD TELEOP -->
+  <node name="keyboard_teleop" pkg="stretch_core" type="keyboard_teleop" output="screen" args='--deliver_object_on'/>
+  <!-- -->
   
   <!-- STRETCH DRIVER -->
   <param name="/stretch_driver/broadcast_odom_tf" type="bool" value="true"/>
@@ -20,6 +24,8 @@
     <param name="debug_directory" type="string" value="$(arg debug_directory)"/>
   </node>
   <!-- -->
+
+  
 
   <!-- IMU FILTER -->
   <include file="$(find stretch_core)/launch/imu_filter.launch" />

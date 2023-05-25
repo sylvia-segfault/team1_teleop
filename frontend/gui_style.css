@@ -28,6 +28,7 @@ input[type=number], input[type=text], select {
   margin: 2px 2px 0px 50px; 
 }
 
+.return_button,
 .set_button,
 .set_all_button,  
 .pose_button, 
