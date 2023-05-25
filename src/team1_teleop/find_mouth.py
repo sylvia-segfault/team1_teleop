@@ -15,7 +15,6 @@ import math
 import threading
 import argparse as ap        
 import numpy as np
-import threading
 import ros_numpy as rn
 
 import hello_helpers.hello_misc as hm
@@ -32,7 +31,6 @@ class HandoverObjectNode(hm.HelloNode):
         self.move_base = nv.MoveBase(self)
         self.letter_height_m = 0.2
         self.wrist_position = None
-        self.lift_position = None
         self.manipulation_view = None
         
         marker = Marker()
@@ -41,13 +39,15 @@ class HandoverObjectNode(hm.HelloNode):
 
         num_pan_angles = 5
 
+        self.sub_walker_ret = rospy.Subscriber('return_walker_cmd', Float64, self.return_walker_callback)
+
         # looking out along the arm
         middle_pan_angle = -math.pi/2.0
 
         look_around_range = math.pi/3.0
         min_pan_angle = middle_pan_angle - (look_around_range / 2.0)
-        max_pan_angle = middle_pan_angle + (look_around_range / 2.0)
-        pan_angle = min_pan_angle
+        # max_pan_angle = middle_pan_angle + (look_around_range / 2.0)
+        # pan_angle = min_pan_angle
         pan_increment = look_around_range / float(num_pan_angles - 1.0)
         self.pan_angles = [min_pan_angle + (i * pan_increment)
                            for i in range(num_pan_angles)]
@@ -58,6 +58,12 @@ class HandoverObjectNode(hm.HelloNode):
 
         with self.move_lock: 
             self.handover_goal_ready = False
+
+    def joint_states_callback(self, joint_states):
+        with self.joint_states_lock: 
+            self.joint_states = joint_states
+        wrist_position, _, _ = hm.get_wrist_state(joint_states)
+        self.wrist_position = wrist_position
 
     def look_around_callback(self):
         # Cycle the head back and forth looking for a person to whom
@@ -120,13 +126,7 @@ class HandoverObjectNode(hm.HelloNode):
 
                     delta_forward_m = fingers_error[0] 
                     delta_extension_m = -fingers_error[1]
-                    delta_lift_m = fingers_error[2]
-
-                    max_lift_m = 1.0
-                    #TODO: change lift height
-                    lift_goal_m = self.lift_position + delta_lift_m
-                    lift_goal_m = min(max_lift_m, lift_goal_m)
-                    self.lift_goal_m = lift_goal_m
+                    # delta_lift_m = fingers_error[2]
 
                     self.mobile_base_forward_m = delta_forward_m
 
@@ -152,8 +152,6 @@ class HandoverObjectNode(hm.HelloNode):
             self.move_to_pose(pose)
 
             if self.handover_goal_ready: 
-                pose = {'joint_lift': self.lift_goal_m}
-                self.move_to_pose(pose)
                 tolerance_distance_m = 0.01
                 at_goal = self.move_base.forward(self.mobile_base_forward_m, detect_obstacles=False, tolerance_distance_m=tolerance_distance_m)
                 pose = {'wrist_extension': self.wrist_goal_m}
@@ -167,7 +165,7 @@ class HandoverObjectNode(hm.HelloNode):
 
     
     def main(self):
-        hm.HelloNode.main(self, 'handover_object', 'handover_object', wait_for_first_pointcloud=False)
+        hm.HelloNode.main(self, 'find_mouth', 'find_mouth', wait_for_first_pointcloud=False)
 
         self.joint_states_subscriber = rospy.Subscriber('/stretch/joint_states', JointState, self.joint_states_callback)
         
@@ -184,13 +182,20 @@ class HandoverObjectNode(hm.HelloNode):
             if look_around: 
                 self.look_around_callback()
             rate.sleep()
-
+    
+    def return_walker_callback(self):
+        try:
+            node = HandoverObjectNode()
+            # node.main()
+            rospy.loginfo("cmd to return walker received")
+        except KeyboardInterrupt:
+            rospy.loginfo('interrupt received, so shutting down')
         
 if __name__ == '__main__':
     try:
         parser = ap.ArgumentParser(description='Handover an object.')
         args, unknown = parser.parse_known_args()
         node = HandoverObjectNode()
-        node.main()
+        print("not starting from here")
     except KeyboardInterrupt:
         rospy.loginfo('interrupt received, so shutting down')

@@ -10,7 +10,7 @@
   <!-- -->
   
   <!-- STRETCH DRIVER -->
-  <param name="/stretch_driver/broadcast_odom_tf" type="bool" value="false"/>
+  <param name="/stretch_driver/broadcast_odom_tf" type="bool" value="true"/>
   <param name="/stretch_driver/fail_out_of_range_goal" type="bool" value="false"/>
   <include file="$(find stretch_core)/launch/stretch_driver.launch" pass_all_args="true"/>
   <!-- -->
@@ -29,6 +29,7 @@
   <include file="$(find stretch_core)/launch/stretch_ekf.launch" />
   <!-- -->
 
+<!-- NOT INCLUDED-->
   <!-- LASER RANGE FINDER -->
   <include file="$(find stretch_core)/launch/rplidar.launch" />
   <!-- -->

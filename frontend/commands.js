@@ -156,4 +156,17 @@ function whilemousedown() {
 //Also clear the interval when user leaves the window with mouse
 //document.addEventListener("mouseout", mouseup);
 
+
+/////////////////////////// Person Detection //////////////////////////////////
+return_walker_cmd = new ROSLIB.Topic({
+  ros : ros,
+  name : "/return_walker_cmd",
+  messageType : 'std_msgs/Float64'
+});
+
+function return_walker() {
+  let msg = new ROSLIB.Message(1);
+  return_walker_cmd.publish(msg);
+}
+
   
