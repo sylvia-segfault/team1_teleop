@@ -6,6 +6,7 @@ import rospy
 import tf2_ros
 import tf2_geometry_msgs
 from std_msgs.msg import Float64, String
+from sensor_msgs.msg import JointState
 from nav_msgs.msg import Odometry
 from team1_teleop.msg import SavePose, SavedPoses
 from geometry_msgs.msg import PoseStamped, PointStamped
@@ -47,13 +48,33 @@ class TeleopNode(hm.HelloNode):
         self.walker_nav_pub = rospy.Publisher('move_base_simple/goal', PoseStamped, queue_size=10)
 
         """ Receives input from the user to grab the walker """
-        self.gripper_nav_pub = rospy.Publisher('/clicked_point', PointStamped, queue_size=10)
+        self.joint_states_sub = rospy.Subscriber('/joint_states', JointState, self.joint_state_callback)
 
         """ HARD CODE GRIPPER POSITION IN RELATION TO ARUCO TAG """
         self.gripper_pos_3d = PoseStamped()
         self.gripper_pos_3d.header.seq = 1
         self.gripper_pos_3d.header.frame_id = 'link_grasp_center'
         self.gripper_pos_3d.header.stamp = rospy.Time.now()
+
+        self.walker_pos_3d = PoseStamped()
+        self.walker_pos_3d.header.seq = 1
+        self.walker_pos_3d.header.frame_id = 'walker_center'
+        self.walker_pos_3d.header.stamp = rospy.Time.now()
+        self.walker_pos_3d.pose.position.x = 0
+        self.walker_pos_3d.pose.position.y = 0
+        self.walker_pos_3d.pose.position.z = 0
+        self.walker_pos_3d.pose.orientation.x = 0
+        self.walker_pos_3d.pose.orientation.y = -0.7068252
+        self.walker_pos_3d.pose.orientation.z = 0
+        self.walker_pos_3d.pose.orientation.w = 0.7073883
+
+        # test gripper poses
+        self.test_target_pub = rospy.Publisher("/test_pose_target", PoseStamped, queue_size=10)
+        self.test_cur_pub = rospy.Publisher("/test_pose_curr", PoseStamped, queue_size=10)
+
+        self.cur_lift_pos = None
+        self.cur_arm_pos = None
+
 
 
         """ 
@@ -108,9 +129,11 @@ class TeleopNode(hm.HelloNode):
     
     def aruco_callback(self, timer):
         self.gripper_pos_3d.header.stamp = rospy.Time.now()
+        self.walker_pos_3d.header.stamp = rospy.Time.now()
 
     def pose_in_coordframe_callback(self, msg):
         frame_id, pose_type, pose = self.saved_poses[msg.data]
+        pose.header.stamp = rospy.Time.now()
         try:
             trans = self.tf2_buffer.lookup_transform("map", frame_id, rospy.Time.now(), rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
@@ -121,13 +144,77 @@ class TeleopNode(hm.HelloNode):
             robot_pose_out = tf2_geometry_msgs.do_transform_pose(pose, trans)
             self.walker_nav_pub.publish(robot_pose_out)
         else:
-            point = tf2_geometry_msgs.PointStamped()
-            point.header = pose.header
-            point.point.x = pose.pose.position.x
-            point.point.y = pose.pose.position.y
-            point.point.z = pose.pose.position.z
-            gripper_point_out = tf2_geometry_msgs.do_transform_point(point, trans)
-            self.gripper_nav_pub.publish(gripper_point_out)
+            try:
+                gripper_trans = self.tf2_buffer.lookup_transform(frame_id, 'link_grasp_center', rospy.Time.now(), rospy.Duration(1))
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                print(e)
+                rospy.logwarn("Cannot transform the gripper frame into the specified coordinate frame")
+                return
+            cur_pose = tf2_geometry_msgs.do_transform_pose(self.gripper_pos_3d, gripper_trans)
+            rospy.loginfo('current x: ' + str(cur_pose.pose.position.x))
+            rospy.loginfo('current y: ' + str(cur_pose.pose.position.y))
+            rospy.loginfo('current z: ' + str(cur_pose.pose.position.z))
+
+            # lower the lift, z becomes smaller by a similar amount!
+            # retract the arm, y becomes smaller by a similar amount
+            # rotate the wrist towards marker, y becomes smaller
+       
+
+            """
+            hard code wrist pos to be 1.5
+            gripper to be 0.2
+
+            close gripper -0.1
+            """
+            
+            apt = self.gc.finger_rad_to_aperture(0.2)
+            self.move_to_pose({"gripper_aperture": apt})
+            self.test_target_pub.publish(pose)
+
+            goal_y = pose.pose.position.y
+            y_threshold = 0.01
+            y_diff = cur_pose.pose.position.y - goal_y
+            while abs(y_diff) > y_threshold:
+                self.test_cur_pub.publish(cur_pose)
+                sign = 1 if cur_pose.pose.position.y > goal_y else -1
+                arm_pose = {"joint_arm": self.cur_arm_pos - sign * 0.01}
+                self.move_to_pose(arm_pose)
+                try:
+                    gripper_trans_after = self.tf2_buffer.lookup_transform(frame_id, 'link_grasp_center', rospy.Time.now(), rospy.Duration(1))
+                except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                    print(e)
+                    rospy.logwarn("Cannot transform the gripper frame into the specified coordinate frame")
+                    return
+                pose_after = tf2_geometry_msgs.do_transform_pose(self.gripper_pos_3d, gripper_trans_after)
+                y_diff = pose_after.pose.position.y - goal_y
+                    
+            self.move_to_pose({"joint_wrist_yaw": 1.5})
+
+            goal_z = pose.pose.position.z
+            z_threshold = 0.01
+            z_diff = cur_pose.pose.position.z - goal_z
+            while abs(z_diff) > z_threshold:
+                self.test_cur_pub.publish(cur_pose)
+                sign = 1 if cur_pose.pose.position.z > goal_z else -1
+                lift_pose = {"joint_lift": self.cur_lift_pos - sign * 0.01}
+                self.move_to_pose(lift_pose)
+                try:
+                    gripper_trans_after = self.tf2_buffer.lookup_transform(frame_id, 'link_grasp_center', rospy.Time.now(), rospy.Duration(1))
+                except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                    print(e)
+                    rospy.logwarn("Cannot transform the gripper frame into the specified coordinate frame")
+                    return
+                pose_after = tf2_geometry_msgs.do_transform_pose(self.gripper_pos_3d, gripper_trans_after)
+                z_diff = pose_after.pose.position.z - goal_z
+
+
+            apt = self.gc.finger_rad_to_aperture(-0.3)
+            self.move_to_pose({"gripper_aperture": apt})
+        
+    def joint_state_callback(self, msg):
+        self.cur_lift_pos, _, _ = hm.get_lift_state(msg)
+        self.cur_arm_pos = msg.position[8] + msg.position[7] + msg.position[6] + msg.position[5]
+
 
     """
     ***********************************
