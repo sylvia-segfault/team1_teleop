@@ -190,3 +190,16 @@ move_to_cf_pose = function (name) {
   let msg = new ROSLIB.Message({data: name});
   pose_in_cf_cmd.publish(msg);
 }
+
+/////////////////////////// Person Detection //////////////////////////////////
+return_walker_cmd = new ROSLIB.Topic({
+  ros : ros,
+  name : "/return_walker_cmd",
+  messageType : 'std_msgs/Float64'
+});
+
+function return_walker() {
+  let msg = new ROSLIB.Message(1);
+  return_walker_cmd.publish(msg);
+}
+

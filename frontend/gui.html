@@ -1,6 +1,8 @@
 <!DOCTYPE html>
+
 <html>
 
+<div>
 <head>
   <meta charset="utf-8" />
   <link rel="stylesheet" href="gui_style.css">
@@ -21,7 +23,7 @@
   </script>
 </head>
 
-<body>
+<div>
   <h1>ROS User Interface</h1>
   <p class="positions">Connection status: <span id="status"></span></p><br>
   <p class="positions">Head Pan position: <span id="head_pan_msg"></span></p><br>
@@ -91,6 +93,10 @@
   </div>
 
 
+</div class="return walker">
+  <button class="return_button" type="button" onclick="return_walker()">Return Walker</button><br>
+</div>
+  
   <div id="saved_poses">
   </div>
 
