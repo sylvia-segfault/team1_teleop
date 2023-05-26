@@ -102,14 +102,14 @@ move_to_pose = function (name) {
 
 translate_base_cmd = new ROSLIB.Topic({
   ros : ros,
-  name : "/cmd_vel",
+  name : "/stretch/cmd_vel",
   messageType : 'geometry_msgs/Twist'
 });
 
 rotate_base_cmd = new ROSLIB.Topic({
   ros : ros,
-  name : "/rotate_base_cmd",
-  messageType : 'std_msgs/Float64'
+  name : "/stretch/cmd_vel",
+  messageType : 'geometry_msgs/Twist'
 });
 
 stop_base_cmd = new ROSLIB.Topic({
@@ -127,16 +127,22 @@ function mousedown(type, data) {
   move_amount = data * Number(document.getElementById("velocity").value);
   if(mousedownID==-1)  //Prevent multimple loops!
      mousedownID = setInterval(whilemousedown, 100 /*execute every 100ms*/);
-
-
 }
 function mouseup() {
   console.log("mouse up");
   if(mousedownID!=-1) {  //Only stop if exists
     clearInterval(mousedownID);
     let msg = new ROSLIB.Message({
-      linear : 0,
-      angular : 0
+      linear : {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+      angular : {
+        x: 0,
+        y: 0,
+        z: 0
+      },
     });
     translate_base_cmd.publish(msg);
     move_type = '';
@@ -146,14 +152,34 @@ function mouseup() {
 
 }
 function whilemousedown() {
-  let msg = new ROSLIB.Message({
-    linear : {x : 0.1, y: 0.0, z : 0.0},
-    angular : {x : 0.1, y: 0.1, z : 0.1}
-  });
   if (move_type === "translate") {
+    let msg = new ROSLIB.Message({
+      linear : {
+        x: move_amount,
+        y: 0,
+        z: 0
+      },
+      angular : {
+        x: 0,
+        y: 0,
+        z: 0
+      },
+    });
     console.log("translate base");
     translate_base_cmd.publish(msg);
   } else if (move_type === "rotate") {
+    let msg = new ROSLIB.Message({
+      linear : {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+      angular : {
+        x: 0,
+        y: 0,
+        z: move_amount,
+      },
+    });
     console.log("rotate base");
     rotate_base_cmd.publish(msg);
   }
