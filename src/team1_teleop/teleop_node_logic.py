@@ -386,43 +386,38 @@ class TeleopNode(hm.HelloNode):
         y_diff = abs(self.home.pose.position.y - odom_flip.pose.position.y)
         x_diff = abs(self.home.pose.position.x - odom_flip.pose.position.x)
         angle_needed = math.atan(y_diff / x_diff)
+        dist = math.sqrt((odom_flip.pose.position.x - self.home.pose.position.x) ** 2 + (odom_flip.pose.position.y - self.home.pose.position.y) ** 2)
 
-        thresh = 0.1
-        while abs(yaw - angle_needed) > thresh:
+        turn_thresh = 0.1
+        dist_thresh = 0.2
+        while abs(yaw - angle_needed) > turn_thresh or dist > dist_thresh:
+            rospy.loginfo(f"angle_needed: {angle_needed}, current yaw: {yaw}")
             if angle_needed > yaw:
                 # turn left
-                base_msg.angular.z = 0.05
+                base_msg.angular.z = 0.15
             else:
                 # turn right
-                base_msg.angular.z = -0.05
+                base_msg.angular.z = -0.15
             self.move_base_pub.publish(base_msg)
-            rospy.sleep(1)
+            rospy.sleep(0.6)
             self.odom_pos_3d.pose = self.curr_pos.pose
             odom_flip = tf2_geometry_msgs.do_transform_pose(self.odom_pos_3d, odom_to_map_trans)
             q = odom_flip.pose.orientation
             _, _, yaw = tf_conversions.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
+            y_diff = abs(self.home.pose.position.y - odom_flip.pose.position.y)
+            x_diff = abs(self.home.pose.position.x - odom_flip.pose.position.x)
+            angle_needed = math.atan(y_diff / x_diff)
+            dist = math.sqrt((odom_flip.pose.position.x - self.home.pose.position.x) ** 2 + (odom_flip.pose.position.y - self.home.pose.position.y) ** 2)
+            if dist > dist_thresh:
+                base_msg.linear.x = -0.1
+                self.move_base_pub.publish(base_msg)
+                rospy.sleep(0.3)
         
-        thresh = 0.2
-        dist = math.sqrt((odom_flip.pose.position.x - self.home.pose.position.x) ** 2 + (odom_flip.pose.position.y - self.home.pose.position.y) ** 2)
-        while dist > thresh:
-            # driv backward
-            base_msg.linear.x = -0.2
-            self.move_base_pub.publish(base_msg)
-            rospy.sleep(1)
+        rospy.loginfo("done homing")
             
         # open the gripper again
         apt = self.gc.finger_rad_to_aperture(0.2)
         self.move_to_pose({"gripper_aperture": apt})
-        
-        
-        # _, _, new_yaw = tf_conversions.transformations.euler_from_quaternion()
-        # self.test_pub2.publish(odom_flip)
-        # rotate current odom pose by 180 degrees
-        # get angle between current odom pose and line between robot center and home location
-        # rotate to that angle
-        # drive backward until somewhat close to the user (hard code distance)
-        # let go of the walker (stow the stretch basically)
-        # drive all the way back to home.
 
     def normalize_angle(self, angle: float) -> float:
         """
