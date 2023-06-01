@@ -57,7 +57,7 @@ class PplLocateNode(hm.HelloNode):
         # looking out along the arm
         middle_pan_angle = -math.pi/2.0
 
-        look_around_range = math.pi/3.0
+        look_around_range = math.pi
         min_pan_angle = middle_pan_angle - (look_around_range / 2.0)
         # max_pan_angle = middle_pan_angle + (look_around_range / 2.0)
         # pan_angle = min_pan_angle
@@ -140,22 +140,22 @@ class PplLocateNode(hm.HelloNode):
                     print('fingers_error =', fingers_error)
 
                     delta_forward_m = fingers_error[0] 
-                    delta_extension_m = -fingers_error[1]
+                    # delta_extension_m = -fingers_error[1]
                     # delta_lift_m = fingers_error[2]
 
                     self.mobile_base_forward_m = delta_forward_m
 
-                    max_wrist_extension_m = 0.5
-                    wrist_goal_m = self.wrist_position + delta_extension_m
+                    # max_wrist_extension_m = 0.5
+                    # wrist_goal_m = self.wrist_position + delta_extension_m
 
-                    if handoff_object:
-                        # attempt to handoff the object by keeping distance
-                        # between the object and the mouth distance
-                        #wrist_goal_m = wrist_goal_m - 0.3 # 30cm from the mouth
-                        wrist_goal_m = wrist_goal_m - 0.25 # 25cm from the mouth
-                        wrist_goal_m = max(0.0, wrist_goal_m)
+                    # if handoff_object:
+                    #     # attempt to handoff the object by keeping distance
+                    #     # between the object and the mouth distance
+                    #     #wrist_goal_m = wrist_goal_m - 0.3 # 30cm from the mouth
+                    #     wrist_goal_m = wrist_goal_m - 0.25 # 25cm from the mouth
+                    #     wrist_goal_m = max(0.0, wrist_goal_m)
 
-                    self.wrist_goal_m = min(max_wrist_extension_m, wrist_goal_m)
+                    # self.wrist_goal_m = min(max_wrist_extension_m, wrist_goal_m)
 
                     self.handover_goal_ready = True
 
@@ -164,14 +164,14 @@ class PplLocateNode(hm.HelloNode):
         print("trigger handover object callback")
         with self.move_lock: 
             # First, retract the wrist in preparation for handing out an object.
-            pose = {'wrist_extension': 0.005}
-            self.move_to_pose(pose)
+            # pose = {'wrist_extension': 0.005}
+            # self.move_to_pose(pose)
 
             if self.handover_goal_ready: 
                 tolerance_distance_m = 0.01
                 at_goal = self.move_base.forward(self.mobile_base_forward_m, detect_obstacles=False, tolerance_distance_m=tolerance_distance_m)
-                pose = {'wrist_extension': self.wrist_goal_m}
-                self.move_to_pose(pose)
+                # pose = {'wrist_extension': self.wrist_goal_m}
+                # self.move_to_pose(pose)
                 self.handover_goal_ready = False
 
             return TriggerResponse(
@@ -185,7 +185,7 @@ class PplLocateNode(hm.HelloNode):
 
         self.joint_states_subscriber = rospy.Subscriber('/stretch/joint_states', JointState, self.joint_states_callback)
         
-        #TODO: not receving anything back
+        #TODO: no publishers
         self.mouth_position_subscriber = rospy.Subscriber('/nearest_mouth/marker_array', MarkerArray, self.mouth_position_callback)
 
         self.trigger_deliver_object_service = rospy.Service('/deliver_object/trigger_deliver_object',
@@ -194,12 +194,10 @@ class PplLocateNode(hm.HelloNode):
     
     def return_walker_callback(self, data):
         print("received command to return walker")
-    
-        # self.trigger_handover_object_callback(None)
         
         # This rate determines how quickly the head pans back and forth.
         rate = rospy.Rate(0.5)
-        look_around = True
+        look_around = False
         while not rospy.is_shutdown():
             if look_around: 
                 self.look_around_callback()
