@@ -5,15 +5,16 @@ the robot's arm position, and the subscribers receives arm move commands.
 import rospy
 import tf2_ros
 import tf2_geometry_msgs
-from geometry_msgs.msg import TwistStamped, Twist
-from std_msgs.msg import Float64, String
+from geometry_msgs.msg import Twist
+from std_msgs.msg import Float64, String, Bool
 from sensor_msgs.msg import JointState
 from nav_msgs.msg import Odometry
 import tf_conversions
 from team1_teleop.msg import SavePose, SavedPoses
-from geometry_msgs.msg import PoseStamped, PointStamped
+from geometry_msgs.msg import PoseStamped
 import os
 import pickle
+import math
 
 import hello_helpers.hello_misc as hm
 from hello_helpers.gripper_conversion import GripperConversion
@@ -43,6 +44,7 @@ class TeleopNode(hm.HelloNode):
         self.front_end_timer = rospy.Timer(rospy.Duration(0.5), self.front_end_timer_callback)
         self.aruco_timer = rospy.Timer(rospy.Duration(0.1), self.aruco_callback)
         self.curr_pos = None
+        self.home = None
         self.odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
         # keep track of user's input (when they want to navigate the walker)
         self.pose_in_coordframe = rospy.Subscriber('pose_in_cf_cmd', String, self.pose_in_coordframe_callback)
@@ -54,6 +56,9 @@ class TeleopNode(hm.HelloNode):
 
         """ Allows this node to move the base, mostly to get close enough to the walker """
         self.move_base_pub = rospy.Publisher("/stretch/cmd_vel", Twist, queue_size=10)
+
+        """ Drive backwards to return the walker back to the robot's starting position """
+        self.home_sub = rospy.Subscriber('/home', Bool, self.home_callback)
 
         """ HARD CODE GRIPPER POSITION IN RELATION TO ARUCO TAG """
         self.gripper_pos_3d = PoseStamped()
@@ -85,6 +90,9 @@ class TeleopNode(hm.HelloNode):
         self.odom_pos_3d.header.frame_id = 'odom'
         self.odom_pos_3d.header.stamp = rospy.Time.now()
 
+        # TODO: delete
+        self.test_pub1 = rospy.Publisher("/odom_actual", PoseStamped, queue_size=1)
+        self.test_pub2 = rospy.Publisher("/odom_pose_vis", PoseStamped, queue_size=10)
 
         """ 
         ***********************************************
@@ -131,6 +139,24 @@ class TeleopNode(hm.HelloNode):
     
     def odom_callback(self, msg: Odometry):
         self.curr_pos = msg.pose
+        if self.home is None:
+            rospy.loginfo("Setting home in map frame")
+            stamped = PoseStamped()
+            stamped.header = msg.header
+            stamped.pose = msg.pose.pose
+
+            # transform odom into the map frame
+            try:
+                trans = self.tf2_buffer.lookup_transform("map", "odom", rospy.Time.now(), rospy.Duration(1))
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                print(e)
+                rospy.logwarn("Cannot transform the odom frame into the map frame")
+                return
+            
+            map_pose = tf2_geometry_msgs.do_transform_pose(stamped, trans)
+            self.home = map_pose
+        # TODO: Delete this stuff
+        # self.test_pub2.publish(stamped)
     
     def aruco_callback(self, timer):
         self.gripper_pos_3d.header.stamp = rospy.Time.now()
@@ -195,6 +221,10 @@ class TeleopNode(hm.HelloNode):
             rospy.loginfo('current y: ' + str(cur_pose.pose.position.y))
             rospy.loginfo('current z: ' + str(cur_pose.pose.position.z))
 
+            apt = self.gc.finger_rad_to_aperture(0.2)
+            self.move_to_pose({"gripper_aperture": apt})
+            self.test_target_pub.publish(pose)
+            
             """
             transform /odom into the specified frame
             convert it into r, p, y and compare with the goal's r, p, y
@@ -207,25 +237,35 @@ class TeleopNode(hm.HelloNode):
             _, _, y_odom = tf_conversions.transformations.euler_from_quaternion([q_odom.x, q_odom.y, q_odom.z, q_odom.w])
             q_goal = pose.pose.orientation
             _, _, y_goal = tf_conversions.transformations.euler_from_quaternion([q_goal.x, q_goal.y, q_goal.z, q_goal.w])
+
+            y_odom = self.normalize_angle(y_odom)
+            y_goal = self.normalize_angle(y_goal)
+
             base_msg = Twist()
             base_thresh = 0.001
             odom_diff = y_goal - y_odom
+            
             while abs(odom_diff) > base_thresh:
+                # self.test_pub1.publish(y_odom)
                 if y_odom < y_goal:
                     # turn left
                     base_msg.angular.z = 0.05
+                    rospy.loginfo("incre")
                 else:
                     base_msg.angular.z = -0.05
+                    rospy.loginfo("decre")
                 self.move_base_pub.publish(base_msg)
+                self.odom_pos_3d.pose = self.curr_pos.pose
                 base_trans = self.tf2_buffer.lookup_transform(frame_id, 'odom', rospy.Time.now(), rospy.Duration(1))
                 base_pos = tf2_geometry_msgs.do_transform_pose(self.odom_pos_3d, base_trans)
                 q_odom = base_pos.pose.orientation
                 _, _, y_odom = tf_conversions.transformations.euler_from_quaternion([q_odom.x, q_odom.y, q_odom.z, q_odom.w])
+                y_odom = self.normalize_angle(y_odom)
                 odom_diff = y_goal - y_odom
-        
-            apt = self.gc.finger_rad_to_aperture(0.2)
-            self.move_to_pose({"gripper_aperture": apt})
-            self.test_target_pub.publish(pose)
+                rospy.loginfo(f"Goal y:  {y_goal}")
+                rospy.loginfo(f"Odom pose y: {y_odom}")
+                rospy.loginfo(f"diff y: {odom_diff}")
+                rospy.loginfo("*****************")
 
             # retract the arm, y becomes smaller by a similar amount
             goal_y = pose.pose.position.y
@@ -310,10 +350,88 @@ class TeleopNode(hm.HelloNode):
 
             apt = self.gc.finger_rad_to_aperture(-0.3)
             self.move_to_pose({"gripper_aperture": apt})
-        
+
     def joint_state_callback(self, msg):
         self.cur_lift_pos, _, _ = hm.get_lift_state(msg)
         self.cur_arm_pos = msg.position[8] + msg.position[7] + msg.position[6] + msg.position[5]
+    
+    def home_callback(self, msg: Bool):
+        if not msg.data:
+            return
+        
+        self.odom_pos_3d.pose = self.curr_pos.pose
+        self.test_pub1.publish(self.odom_pos_3d)
+        try:
+            odom_to_map_trans = self.tf2_buffer.lookup_transform("map", "odom", rospy.Time.now(), rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+            print(e)
+            rospy.logwarn("Cannot transform the gripper frame into the specified coordinate frame")
+            return
+        odom_flip = tf2_geometry_msgs.do_transform_pose(self.odom_pos_3d, odom_to_map_trans)
+        q = odom_flip.pose.orientation
+        roll, pitch, yaw = tf_conversions.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
+        rospy.loginfo(f"r: {roll}, p: {pitch}, y: {yaw}")
+        yaw += math.pi
+        rospy.loginfo(yaw)
+        new_quat = tf_conversions.transformations.quaternion_from_euler(0, 0, yaw)
+        odom_flip.pose.orientation.x = new_quat[0]
+        odom_flip.pose.orientation.y = new_quat[1]
+        odom_flip.pose.orientation.z = new_quat[2]
+        odom_flip.pose.orientation.w = new_quat[3]
+
+        base_msg = Twist()
+
+        # tan theta = y/x
+        # theta = arctan(y/x)
+        y_diff = abs(self.home.pose.position.y - odom_flip.pose.position.y)
+        x_diff = abs(self.home.pose.position.x - odom_flip.pose.position.x)
+        angle_needed = math.atan(y_diff / x_diff)
+
+        thresh = 0.1
+        while abs(yaw - angle_needed) > thresh:
+            if angle_needed > yaw:
+                # turn left
+                base_msg.angular.z = 0.05
+            else:
+                # turn right
+                base_msg.angular.z = -0.05
+            self.move_base_pub.publish(base_msg)
+            rospy.sleep(1)
+            self.odom_pos_3d.pose = self.curr_pos.pose
+            odom_flip = tf2_geometry_msgs.do_transform_pose(self.odom_pos_3d, odom_to_map_trans)
+            q = odom_flip.pose.orientation
+            _, _, yaw = tf_conversions.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
+        
+        thresh = 0.2
+        dist = math.sqrt((odom_flip.pose.position.x - self.home.pose.position.x) ** 2 + (odom_flip.pose.position.y - self.home.pose.position.y) ** 2)
+        while dist > thresh:
+            # driv backward
+            base_msg.linear.x = -0.2
+            self.move_base_pub.publish(base_msg)
+            rospy.sleep(1)
+            
+        # open the gripper again
+        apt = self.gc.finger_rad_to_aperture(0.2)
+        self.move_to_pose({"gripper_aperture": apt})
+        
+        
+        # _, _, new_yaw = tf_conversions.transformations.euler_from_quaternion()
+        # self.test_pub2.publish(odom_flip)
+        # rotate current odom pose by 180 degrees
+        # get angle between current odom pose and line between robot center and home location
+        # rotate to that angle
+        # drive backward until somewhat close to the user (hard code distance)
+        # let go of the walker (stow the stretch basically)
+        # drive all the way back to home.
+
+    def normalize_angle(self, angle: float) -> float:
+        """
+        Input is in radians
+        """
+        two_pi_scoped = math.atan2(math.sin(angle), math.cos(angle))
+        if two_pi_scoped < 0:
+            two_pi_scoped += 2 * math.pi
+        return two_pi_scoped
 
 
     """

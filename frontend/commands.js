@@ -224,3 +224,15 @@ move_to_cf_pose = function (name) {
   const msg = new ROSLIB.Message({data: name});
   pose_in_cf_cmd.publish(msg);
 }
+
+home_cmd = new ROSLIB.Topic({
+  ros: ros,
+  name: "/home",
+  messageType: "std_msgs/Bool"
+});
+
+go_home = function () {
+  console.log("Going back home to sleeeeep");
+  const msg = new ROSLIB.Message({data: true});
+  home_cmd.publish(msg);
+}
