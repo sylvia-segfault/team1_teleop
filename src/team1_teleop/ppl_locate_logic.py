@@ -1,31 +1,13 @@
 #!/usr/bin/env python3
-
-from sensor_msgs.msg import JointState
-from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
-
 import rospy
-import actionlib
-from control_msgs.msg import FollowJointTrajectoryAction
-from control_msgs.msg import FollowJointTrajectoryGoal
-from trajectory_msgs.msg import JointTrajectoryPoint
 from std_msgs.msg import Float64
-
 from visualization_msgs.msg import MarkerArray, Marker
-
 from geometry_msgs.msg import PointStamped
-
-from sensor_msgs.msg import PointCloud2
-
-from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
+from sensor_msgs.msg import JointState\
+from team1_teleop.msg import PplPos
 
 import math
-import time
-import threading
-import sys
-
-import tf2_ros
-import argparse as ap        
+import threading    
 import numpy as np
 import threading
 import ros_numpy as rn
@@ -107,7 +89,7 @@ class PplLocateNode(hm.HelloNode):
                     lookup_time = rospy.Time(0) # return most recent transform
                     timeout_ros = rospy.Duration(0.1)
 
-                    old_frame_id = self.mouth_point.header.frame_id[1:]
+                    old_frame_id = self.mouth_point.header.frame_id
                     new_frame_id = 'base_link'
                     stamped_transform = self.tf2_buffer.lookup_transform(new_frame_id, old_frame_id, lookup_time, timeout_ros)
                     points_in_old_frame_to_new_frame_mat = rn.numpify(stamped_transform.transform)
@@ -123,61 +105,24 @@ class PplLocateNode(hm.HelloNode):
                     mouth_xyz = np.matmul(camera_to_base_mat, mouth_camera_xyz)[:3]
                     fingers_xyz = grasp_center_to_base_mat[:,3][:3]
 
-                    handoff_object = True
+                    # attempt to handoff the object at a location in front
+                    # the mouth with respect to the world frame (i.e.,
+                    # gravity)
+                    target_offset_xyz = np.array([-0.5, 0.0, 0.0])
 
-                    # TODO： change the target offset position
-                    if handoff_object:
-                        # attempt to handoff the object at a location below
-                        # the mouth with respect to the world frame (i.e.,
-                        # gravity)
-                        target_offset_xyz = np.array([0.0, 0.0, -0.2])
-                    else: 
-                        object_height_m = 0.1
-                        target_offset_xyz = np.array([0.0, 0.0, -object_height_m])
                     target_xyz = mouth_xyz + target_offset_xyz
+                    print('target_xyz =', target_xyz)
 
                     fingers_error = target_xyz - fingers_xyz
-                    print('fingers_error =', fingers_error)
 
                     delta_forward_m = fingers_error[0] 
-                    # delta_extension_m = -fingers_error[1]
-                    # delta_lift_m = fingers_error[2]
 
-                    self.mobile_base_forward_m = delta_forward_m
-
-                    # max_wrist_extension_m = 0.5
-                    # wrist_goal_m = self.wrist_position + delta_extension_m
-
-                    # if handoff_object:
-                    #     # attempt to handoff the object by keeping distance
-                    #     # between the object and the mouth distance
-                    #     #wrist_goal_m = wrist_goal_m - 0.3 # 30cm from the mouth
-                    #     wrist_goal_m = wrist_goal_m - 0.25 # 25cm from the mouth
-                    #     wrist_goal_m = max(0.0, wrist_goal_m)
-
-                    # self.wrist_goal_m = min(max_wrist_extension_m, wrist_goal_m)
-
-                    self.handover_goal_ready = True
-
-            
-    def trigger_handover_object_callback(self, request):
-        print("trigger handover object callback")
-        with self.move_lock: 
-            # First, retract the wrist in preparation for handing out an object.
-            # pose = {'wrist_extension': 0.005}
-            # self.move_to_pose(pose)
-
-            if self.handover_goal_ready: 
-                tolerance_distance_m = 0.01
-                at_goal = self.move_base.forward(self.mobile_base_forward_m, detect_obstacles=False, tolerance_distance_m=tolerance_distance_m)
-                # pose = {'wrist_extension': self.wrist_goal_m}
-                # self.move_to_pose(pose)
-                self.handover_goal_ready = False
-
-            return TriggerResponse(
-                success=True,
-                message='Completed object handover!'
-                )
+                    msg = {
+                        mouth_xyz[0],
+                        mouth_xyz[1],
+                        delta_forward_m
+                    }
+                    self.mouth_position_publisher.publish(msg)
 
     
     def main(self):
@@ -185,12 +130,10 @@ class PplLocateNode(hm.HelloNode):
 
         self.joint_states_subscriber = rospy.Subscriber('/stretch/joint_states', JointState, self.joint_states_callback)
         
-        #TODO: no publishers
         self.mouth_position_subscriber = rospy.Subscriber('/nearest_mouth/marker_array', MarkerArray, self.mouth_position_callback)
 
-        self.trigger_deliver_object_service = rospy.Service('/deliver_object/trigger_deliver_object',
-                                                            Trigger,
-                                                            self.trigger_handover_object_callback)
+        self.mouth_position_publisher = rospy.Publisher('/ppl_locate_result', PplPos, queue_size=1)
+
     
     def return_walker_callback(self, data):
         print("received command to return walker")

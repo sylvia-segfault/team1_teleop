@@ -9,7 +9,7 @@ import stretch_body.robot
 import stretch_body.stretch_gripper
 from std_msgs.msg import Float64, String
 from nav_msgs.msg import Odometry
-from team1_teleop.msg import FrontEnd, SavePose
+from team1_teleop.msg import FrontEnd, SavePose, PplPos
 from geometry_msgs.msg import PoseStamped, PointStamped
 from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
 import os
@@ -55,7 +55,6 @@ class TeleopNode(hm.HelloNode):
         self.walker_grab_sub = rospy.Subscriber('walker_grab_cmd', String, self.walker_grab_callback)
         self.gripper_nav_pub = rospy.Publisher('/clicked_point', PointStamped, queue_size=10)
 
-        
         """ HARD CODE WALKER POSITON IN RELATION TO ARUCO TAG """
 
         self.walker_pos_3d = PoseStamped()
@@ -95,7 +94,12 @@ class TeleopNode(hm.HelloNode):
         # self.sub_stop_base = rospy.Subscriber('stop_base_cmd', Float64, self.stop_base_callback)
 
         # self.set_motion_limits()
+        """ Subscribe to Detected People's Position"""
+        self.ppl_pos_sub = rospy.Subscriber('/ppl_locate_result', PplPos, self.ppl_pos_callback)
         rospy.loginfo("Node initialized")
+        self.mouth_x = None
+        self.mouth_y = None
+        self.mouth_dist = None
     
     # def set_motion_limits(self):
     #     self.lift.set_soft_motion_limit_min(0.25)
@@ -103,7 +107,11 @@ class TeleopNode(hm.HelloNode):
 
     #     self.arm.set_soft_motion_limit_min(0.0)
     #     self.arm.set_soft_motion_limit_max(1)
-    
+
+    def ppl_pos_callback(self, msg: PplPos):
+        self.mouth_x = msg.mouth_x
+        self.mouth_y = msg.mouth_y
+        self.mouth_dist = msg.dist
     
     def save_pose_callback(self, msg: SavePose):
         # if self.curr_pos is None or self.walker_center is None:
