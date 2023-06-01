@@ -52,6 +52,7 @@ add_message_files(
   FILES
   FrontEnd.msg
   SavePose.msg
+  PplPos.msg
 )
 
 ## Generate services in the 'srv' folder

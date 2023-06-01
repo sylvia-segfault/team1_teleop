@@ -8,7 +8,6 @@
 
     <arg name="map_yaml" default="/home/team1/catkin_ws/src/stretch_ros/stretch_navigation/maps/broken_room.yaml" doc="filepath to previously captured map (required)" />
     <arg name="rviz"     default="false"                                                                          doc="whether to show Rviz" />
-
   
     <!-- CENTERED BASE LINK -->
     <node name="centered_base_link_tf_publisher" pkg="tf" type="static_transform_publisher" args="-0.1 0 0 0 0 0 1 /base_link /centered_base_link 100" />
@@ -38,5 +37,7 @@
 
     <!-- VISUALIZE -->
     <node name="rviz" pkg="rviz" type="rviz" output="log" args="-d $(find stretch_navigation)/rviz/navigation.rviz" if="$(arg rviz)" />
+
+    <!-- LOCATE PPL -->
 
 </launch>
