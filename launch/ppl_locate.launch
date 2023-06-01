@@ -34,7 +34,7 @@
   <!-- -->
   
   <!-- HANDOVER OBJECT -->
-  <node name="handover_object" pkg="stretch_demos" type="handover_object" output="screen"/>
+  <!-- <node name="handover_object" pkg="stretch_demos" type="handover_object" output="screen"/> -->
   <!-- -->
   
   <!-- KEYBOARD TELEOP -->
