@@ -389,9 +389,10 @@ class TeleopNode(hm.HelloNode):
         dist = math.sqrt((odom_flip.pose.position.x - self.home.pose.position.x) ** 2 + (odom_flip.pose.position.y - self.home.pose.position.y) ** 2)
 
         turn_thresh = 0.1
-        dist_thresh = 0.2
+        dist_thresh = 0.3
         while abs(yaw - angle_needed) > turn_thresh or dist > dist_thresh:
-            rospy.loginfo(f"angle_needed: {angle_needed}, current yaw: {yaw}")
+            self.test_target_pub.publish(self.home)
+            rospy.loginfo(f"angle_needed: {angle_needed}, current yaw: {yaw}, distance: {dist}")
             if angle_needed > yaw:
                 # turn left
                 base_msg.angular.z = 0.15
