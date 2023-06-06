@@ -29,6 +29,7 @@ input[type=number], input[type=text], select {
 }
 
 .set_button,
+.return_button,
 .set_all_button,  
 .pose_button, 
 .forward_button,

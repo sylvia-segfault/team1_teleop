@@ -10,7 +10,7 @@ from std_msgs.msg import Float64, String, Bool
 from sensor_msgs.msg import JointState
 from nav_msgs.msg import Odometry
 import tf_conversions
-from team1_teleop.msg import SavePose, SavedPoses
+from team1_teleop.msg import SavePose, SavedPoses, PplPos
 from geometry_msgs.msg import PoseStamped
 import os
 import pickle
@@ -108,8 +108,23 @@ class TeleopNode(hm.HelloNode):
         self.sub_wrist = rospy.Subscriber('wrist_cmd', Float64, self.move_wrist_callback)
 
         self.sub_translate_base = rospy.Subscriber('translate_base_cmd', Float64, self.translate_base_callback, queue_size=1)
+
+        """ Subscribe to Detected People's Position"""
+        self.ppl_pos_sub = rospy.Subscriber('/ppl_locate_result', PplPos, self.ppl_pos_callback)
+        self.mouth_x = None
+        self.mouth_y = None
+        self.mouth_dist = None
         rospy.loginfo("Node initialized")
-    
+
+    def ppl_pos_callback(self, msg: PplPos):
+        # only record one mouth location
+        if self.mouth_x is None:
+            self.mouth_x = msg.mouth_x
+            self.mouth_y = msg.mouth_y
+            self.mouth_dist = msg.dist
+            # self.home.pose.position.y = msg.mouth_y
+            # self.home.pose.position.x = msg.mouth_x
+            rospy.loginfo("self.home is set")
     
     def save_pose_callback(self, msg: SavePose):
         if msg.pose_type == 0:
@@ -358,7 +373,7 @@ class TeleopNode(hm.HelloNode):
     def home_callback(self, msg: Bool):
         if not msg.data:
             return
-        
+
         self.odom_pos_3d.pose = self.curr_pos.pose
         self.test_pub1.publish(self.odom_pos_3d)
         try:
@@ -391,6 +406,7 @@ class TeleopNode(hm.HelloNode):
         angle_needed = math.atan2(y_diff, x_diff)
         angle_needed = self.normalize_angle(angle_needed)
         dist = math.sqrt((odom_flip.pose.position.x - self.home.pose.position.x) ** 2 + (odom_flip.pose.position.y - self.home.pose.position.y) ** 2)
+
 
         dist_thresh = 0.3
         while dist > dist_thresh:
@@ -443,7 +459,7 @@ class TeleopNode(hm.HelloNode):
             # self.move_base_pub.publish(base_msg)
             # rospy.sleep(0.3)
         
-        rospy.loginfo("done homing")
+        rospy.loginfo("done homing!!!!!!!!!!!!!!!!!!!!")
             
         # open the gripper again
         apt = self.gc.finger_rad_to_aperture(0.2)

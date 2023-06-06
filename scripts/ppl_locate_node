@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+
+"""
+Construct a people locate node
+"""
+import rospy
+from team1_teleop.ppl_locate_logic import PplLocateNode
+
+
+if __name__ == '__main__':
+    node = PplLocateNode()
+    node.main()
+    rospy.on_shutdown(node.shutdown_hook)
+    rospy.spin()
