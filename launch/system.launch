@@ -6,7 +6,7 @@
     <include file="$(find stretch_core)/launch/d435i_high_resolution.launch"/>
     <include file="$(find stretch_core)/launch/stretch_aruco.launch" />
 
-    <arg name="map_yaml" default="/home/team1/catkin_ws/src/stretch_ros/stretch_navigation/maps/broken_room.yaml" doc="filepath to previously captured map (required)" />
+    <arg name="map_yaml" default="/home/team1/catkin_ws/src/team1_teleop/maps/new_room.yaml" doc="filepath to previously captured map (required)" />
     <arg name="rviz"     default="false"                                                                          doc="whether to show Rviz" />
 
   

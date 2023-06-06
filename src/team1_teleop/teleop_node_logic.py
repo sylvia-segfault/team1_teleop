@@ -164,8 +164,8 @@ class TeleopNode(hm.HelloNode):
         try:
             gripper_trans_after = self.tf2_buffer.lookup_transform('xy_walker_center', 'link_grasp_center', rospy.Time.now(), rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
-            print(e)
-            rospy.logwarn("Cannot transform the gripper frame into the specified coordinate frame")
+            # print(e)
+            #rospy.logwarn("Cannot transform the gripper frame into the specified coordinate frame")
             return
         cur_pose = tf2_geometry_msgs.do_transform_pose(self.gripper_pos_3d, gripper_trans_after)
         self.test_cur_pub.publish(cur_pose)
@@ -371,7 +371,8 @@ class TeleopNode(hm.HelloNode):
         q = odom_flip.pose.orientation
         roll, pitch, yaw = tf_conversions.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
         rospy.loginfo(f"r: {roll}, p: {pitch}, y: {yaw}")
-        yaw += math.pi
+        yaw += math.pi # rotate the robot
+        yaw = self.normalize_angle(yaw)
         rospy.loginfo(yaw)
         new_quat = tf_conversions.transformations.quaternion_from_euler(0, 0, yaw)
         odom_flip.pose.orientation.x = new_quat[0]
@@ -379,40 +380,68 @@ class TeleopNode(hm.HelloNode):
         odom_flip.pose.orientation.z = new_quat[2]
         odom_flip.pose.orientation.w = new_quat[3]
 
-        base_msg = Twist()
+        
 
         # tan theta = y/x
         # theta = arctan(y/x)
-        y_diff = abs(self.home.pose.position.y - odom_flip.pose.position.y)
-        x_diff = abs(self.home.pose.position.x - odom_flip.pose.position.x)
-        angle_needed = math.atan(y_diff / x_diff)
+        # y_diff = abs(self.home.pose.position.y - odom_flip.pose.position.y)
+        # x_diff = abs(self.home.pose.position.x - odom_flip.pose.position.x)
+        y_diff = self.home.pose.position.y - odom_flip.pose.position.y
+        x_diff = self.home.pose.position.x - odom_flip.pose.position.x
+        angle_needed = math.atan2(y_diff, x_diff)
+        angle_needed = self.normalize_angle(angle_needed)
         dist = math.sqrt((odom_flip.pose.position.x - self.home.pose.position.x) ** 2 + (odom_flip.pose.position.y - self.home.pose.position.y) ** 2)
 
-        turn_thresh = 0.1
         dist_thresh = 0.3
-        while abs(yaw - angle_needed) > turn_thresh or dist > dist_thresh:
+        while dist > dist_thresh:
             self.test_target_pub.publish(self.home)
-            rospy.loginfo(f"angle_needed: {angle_needed}, current yaw: {yaw}, distance: {dist}")
+            # rospy.loginfo(f"angle_needed: {angle_needed}, current yaw: {yaw}, distance: {dist}")
+            base_msg = Twist()
             if angle_needed > yaw:
-                # turn left
-                base_msg.angular.z = 0.15
+                if angle_needed - yaw > math.pi:
+                    # turn right
+                    base_msg.angular.z = -0.15
+                else:
+                    # turn left
+                    base_msg.angular.z = 0.15
+            elif yaw > angle_needed:
+                if yaw - angle_needed > math.pi:
+                    base_msg.angular.z = 0.15
+                else:
+                    base_msg.angular.z = -0.15
             else:
-                # turn right
-                base_msg.angular.z = -0.15
+                base_msg.angular.z = 0
+            base_msg.linear.x = -0.1
             self.move_base_pub.publish(base_msg)
-            rospy.sleep(0.6)
+            rospy.sleep(0.3)
             self.odom_pos_3d.pose = self.curr_pos.pose
             odom_flip = tf2_geometry_msgs.do_transform_pose(self.odom_pos_3d, odom_to_map_trans)
             q = odom_flip.pose.orientation
             _, _, yaw = tf_conversions.transformations.euler_from_quaternion([q.x, q.y, q.z, q.w])
-            y_diff = abs(self.home.pose.position.y - odom_flip.pose.position.y)
-            x_diff = abs(self.home.pose.position.x - odom_flip.pose.position.x)
-            angle_needed = math.atan(y_diff / x_diff)
+            yaw += math.pi
+            yaw = self.normalize_angle(yaw)
+            test_quat = tf_conversions.transformations.quaternion_from_euler(0, 0, yaw)
+            odom_flip.pose.orientation.x = test_quat[0]
+            odom_flip.pose.orientation.y = test_quat[1]
+            odom_flip.pose.orientation.z = test_quat[2]
+            odom_flip.pose.orientation.w = test_quat[3]
+            self.test_pub2.publish(odom_flip)
+            # print(f'x home position: {self.home.pose.position.x}')
+            # print(f'y home position: {self.home.pose.position.y}')
+            # print(f'x robot position: {odom_flip.pose.position.x}')
+            # print(f'y robot position: {odom_flip.pose.position.y}')
+            y_diff = self.home.pose.position.y - odom_flip.pose.position.y
+            x_diff = self.home.pose.position.x - odom_flip.pose.position.x
+            angle_needed = math.atan2(y_diff, x_diff)
+            angle_needed = self.normalize_angle(angle_needed)
+            # print(f'yaw : {yaw}')
+            # print(f'angle needed : {angle_needed}')
+
+            # base_msg = Twist()
             dist = math.sqrt((odom_flip.pose.position.x - self.home.pose.position.x) ** 2 + (odom_flip.pose.position.y - self.home.pose.position.y) ** 2)
-            if dist > dist_thresh:
-                base_msg.linear.x = -0.1
-                self.move_base_pub.publish(base_msg)
-                rospy.sleep(0.3)
+            # base_msg.linear.x = -0.1
+            # self.move_base_pub.publish(base_msg)
+            # rospy.sleep(0.3)
         
         rospy.loginfo("done homing")
             
