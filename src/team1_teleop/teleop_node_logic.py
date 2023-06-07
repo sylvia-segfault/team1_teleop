@@ -18,6 +18,7 @@ import math
 
 import hello_helpers.hello_misc as hm
 from hello_helpers.gripper_conversion import GripperConversion
+# import stretch_funmap.navigate as nv
 
 
 class TeleopNode(hm.HelloNode):
@@ -111,19 +112,18 @@ class TeleopNode(hm.HelloNode):
 
         """ Subscribe to Detected People's Position"""
         self.ppl_pos_sub = rospy.Subscriber('/ppl_locate_result', PplPos, self.ppl_pos_callback)
-        self.mouth_x = None
-        self.mouth_y = None
+        # self.move_base = nv.MoveBase(self)
         self.mouth_dist = None
         rospy.loginfo("Node initialized")
 
     def ppl_pos_callback(self, msg: PplPos):
         # only record one mouth location
-        if self.mouth_x is None:
-            self.mouth_x = msg.mouth_x
-            self.mouth_y = msg.mouth_y
+        # self.mouth_x = msg.mouth_x
+        # self.mouth_y = msg.mouth_y
+        if self.mouth_dist is None:
             self.mouth_dist = msg.dist
-            # self.home.pose.position.y = msg.mouth_y
-            # self.home.pose.position.x = msg.mouth_x
+            self.home.pose.position.y = msg.mouth_y
+            self.home.pose.position.x = msg.mouth_x
             rospy.loginfo("self.home is set")
     
     def save_pose_callback(self, msg: SavePose):
@@ -371,6 +371,7 @@ class TeleopNode(hm.HelloNode):
         self.cur_arm_pos = msg.position[8] + msg.position[7] + msg.position[6] + msg.position[5]
     
     def home_callback(self, msg: Bool):
+        # self.move_base.backward(self.mouth_dist, detect_obstacles=False, tolerance_distance_m=0.3)
         if not msg.data:
             return
 
@@ -399,8 +400,8 @@ class TeleopNode(hm.HelloNode):
 
         # tan theta = y/x
         # theta = arctan(y/x)
-        # y_diff = abs(self.home.pose.position.y - odom_flip.pose.position.y)
-        # x_diff = abs(self.home.pose.position.x - odom_flip.pose.position.x)
+        y_diff = abs(self.home.pose.position.y - odom_flip.pose.position.y)
+        x_diff = abs(self.home.pose.position.x - odom_flip.pose.position.x)
         y_diff = self.home.pose.position.y - odom_flip.pose.position.y
         x_diff = self.home.pose.position.x - odom_flip.pose.position.x
         angle_needed = math.atan2(y_diff, x_diff)
@@ -442,18 +443,18 @@ class TeleopNode(hm.HelloNode):
             odom_flip.pose.orientation.z = test_quat[2]
             odom_flip.pose.orientation.w = test_quat[3]
             self.test_pub2.publish(odom_flip)
-            # print(f'x home position: {self.home.pose.position.x}')
-            # print(f'y home position: {self.home.pose.position.y}')
-            # print(f'x robot position: {odom_flip.pose.position.x}')
-            # print(f'y robot position: {odom_flip.pose.position.y}')
+            print(f'x home position: {self.home.pose.position.x}')
+            print(f'y home position: {self.home.pose.position.y}')
+            print(f'x robot position: {odom_flip.pose.position.x}')
+            print(f'y robot position: {odom_flip.pose.position.y}')
             y_diff = self.home.pose.position.y - odom_flip.pose.position.y
             x_diff = self.home.pose.position.x - odom_flip.pose.position.x
             angle_needed = math.atan2(y_diff, x_diff)
             angle_needed = self.normalize_angle(angle_needed)
-            # print(f'yaw : {yaw}')
-            # print(f'angle needed : {angle_needed}')
+            print(f'yaw : {yaw}')
+            print(f'angle needed : {angle_needed}')
 
-            # base_msg = Twist()
+            base_msg = Twist()
             dist = math.sqrt((odom_flip.pose.position.x - self.home.pose.position.x) ** 2 + (odom_flip.pose.position.y - self.home.pose.position.y) ** 2)
             # base_msg.linear.x = -0.1
             # self.move_base_pub.publish(base_msg)

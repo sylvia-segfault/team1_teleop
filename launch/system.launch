@@ -43,24 +43,24 @@
     <node name="rviz" pkg="rviz" type="rviz" output="log" args="-d $(find stretch_navigation)/rviz/navigation.rviz" if="$(arg rviz)" />
 
     <!-- PPL DETECT -->
-    <!-- <arg name="debug_directory" value="$(env HELLO_FLEET_PATH)/debug/"/> -->
+    <arg name="debug_directory" value="$(env HELLO_FLEET_PATH)/debug/"/>
 
     <!-- STRETCH DRIVER -->
-    <!-- <param name="/stretch_driver/fail_out_of_range_goal" type="bool" value="false"/> -->
+    <param name="/stretch_driver/fail_out_of_range_goal" type="bool" value="false"/>
     <!-- -->
 
     <!-- MAPPING -->
-    <!-- <node name="funmap" pkg="stretch_funmap" type="funmap" output="screen" >
+    <node name="funmap" pkg="stretch_funmap" type="funmap" output="screen" >
         <param name="debug_directory" type="string" value="$(arg debug_directory)"/>
-    </node> -->
+    </node>
     <!-- -->
 
     <!-- LASER SCAN MATCHER FOR ODOMETRY -->
-    <!-- <include file="$(find stretch_core)/launch/stretch_scan_matcher.launch" /> -->
+    <include file="$(find stretch_core)/launch/stretch_scan_matcher.launch" />
     <!-- -->
 
     <!-- HANDOVER POSITION DETECTOR -->
-    <!-- <node name="detect_handover_position" pkg="stretch_deep_perception" type="detect_nearest_mouth.py" output="screen" /> -->
+    <node name="detect_handover_position" pkg="stretch_deep_perception" type="detect_nearest_mouth.py" output="screen" />
     <!-- -->
 
 </launch>
